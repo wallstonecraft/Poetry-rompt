@@ -53,24 +53,6 @@ export default async function HomePage() {
         />
       </Card>
 
-      {weeklyFeature && (
-        <Link href={`/featured/${weeklyFeature.id}`} style={{ display: "block", color: "inherit" }}>
-          <Card interactive style={{ marginBottom: 16 }}>
-            <div style={{ font: "var(--text-caption-medium)", color: "var(--green-700)", letterSpacing: "var(--tracking-caption)", marginBottom: 12 }}>
-              WEEKLY FEATURED POET
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <Avatar name={weeklyFeature.poet.name} size={28} src={weeklyFeature.poet.avatarUrl} />
-              <span style={{ font: "var(--text-caption-medium)", color: "var(--text-secondary)" }}>{weeklyFeature.poet.name}</span>
-            </div>
-            <div style={{ font: "var(--text-poem)", color: "var(--ink-1)", whiteSpace: "pre-line", marginBottom: 10 }}>
-              {poemContentToPlainText(weeklyFeature.poem.content)}
-            </div>
-            <div style={{ font: "var(--text-caption-medium)", color: "var(--green-700)" }}>Read the poem and the conversation</div>
-          </Card>
-        </Link>
-      )}
-
       {dailyInspiration && (
         <Link href={`/poem/${dailyInspiration.poem.id}`} style={{ display: "block", color: "inherit" }}>
           <Card interactive style={{ marginBottom: 20 }}>
@@ -96,6 +78,35 @@ export default async function HomePage() {
           </div>
         ))}
       </Card>
+
+      {weeklyFeature && (
+        <Link href={`/featured/${weeklyFeature.id}`} style={{ display: "block", color: "inherit" }}>
+          <Card interactive style={{ marginTop: 20 }}>
+            <div style={{ font: "var(--text-caption-medium)", color: "var(--green-700)", letterSpacing: "var(--tracking-caption)", marginBottom: 12 }}>
+              WEEKLY FEATURED POET
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <Avatar name={weeklyFeature.poet.name} size={28} src={weeklyFeature.poet.avatarUrl} />
+              <span style={{ font: "var(--text-caption-medium)", color: "var(--text-secondary)" }}>{weeklyFeature.poet.name}</span>
+            </div>
+            <div
+              style={{
+                font: "var(--text-poem)",
+                color: "var(--ink-1)",
+                whiteSpace: "pre-line",
+                marginBottom: 10,
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {poemContentToPlainText(weeklyFeature.poem.content)}
+            </div>
+            <div style={{ font: "var(--text-caption-medium)", color: "var(--green-700)" }}>Read the poem and the conversation</div>
+          </Card>
+        </Link>
+      )}
 
       <Link
         href="/explore"
