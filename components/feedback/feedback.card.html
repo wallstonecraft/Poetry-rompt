@@ -1,0 +1,46 @@
+<!-- @dsCard group="Components" viewport="700x420" name="Feedback" -->
+<html><head>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;padding:24px;background:var(--bg-app);font-family:var(--font-sans)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+</style>
+</head><body>
+<div id="root" style="position:relative;height:360px"></div>
+<script type="text/babel">
+const { Badge, Tag, Tooltip, ProgressBar, Toast, IconButton } = window.PoetryPrompt;
+function HeartIcon(){return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.6-9.5-9C.7 8.2 2.4 4.5 6 4.5c2 0 3.4 1.1 4 2.4.6-1.3 2-2.4 4-2.4 3.6 0 5.3 3.7 3.5 7.5-2.5 4.4-9.5 9-9.5 9z" fill="currentColor"/></svg>);}
+
+function Demo(){
+  const [selected,setSelected]=React.useState('nature');
+  return (
+    <div style={{position:'relative'}}>
+      <div className="row">
+        <Badge tone="brand">7-day streak</Badge>
+        <Badge tone="neutral">Draft</Badge>
+        <Badge tone="accent">New</Badge>
+        <Badge tone="warning">Streak at risk</Badge>
+        <Badge tone="error">Sync failed</Badge>
+      </div>
+      <div className="row">
+        <Tag selected={selected==='nature'} onClick={()=>setSelected('nature')}>Nature</Tag>
+        <Tag selected={selected==='grief'} onClick={()=>setSelected('grief')}>Grief</Tag>
+        <Tag onRemove={()=>{}}>Untagged removable</Tag>
+      </div>
+      <div className="row">
+        <Tooltip label="Favorite this poem" visible><IconButton aria-label="Favorite"><HeartIcon/></IconButton></Tooltip>
+      </div>
+      <div className="row" style={{width:280,display:'block'}}>
+        <div style={{font:'var(--text-caption)',color:'var(--text-secondary)',marginBottom:6}}>Monthly goal — 13/20 poems</div>
+        <ProgressBar value={65} />
+      </div>
+      <Toast message="Exported to Notion" tone="success" visible />
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
+</body></html>

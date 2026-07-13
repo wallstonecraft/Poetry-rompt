@@ -1,0 +1,42 @@
+<!-- @dsCard group="Components" viewport="700x520" name="Data Display" -->
+<html><head>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;padding:24px;background:var(--bg-app);font-family:var(--font-sans)}
+.row{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}
+</style>
+</head><body>
+<div id="root"></div>
+<script type="text/babel">
+const { Card, Avatar, Tabs } = window.PoetryPrompt;
+
+function Demo(){
+  const [tab, setTab] = React.useState('all');
+  return (
+    <div>
+      <div className="row" style={{maxWidth:320}}>
+        <Tabs tabs={[{value:'all',label:'All'},{value:'favorites',label:'Favorites'},{value:'drafts',label:'Drafts'}]} value={tab} onChange={setTab} style={{width:'100%'}} />
+      </div>
+      <div className="row">
+        <Card style={{width:260}}>
+          <div style={{font:'var(--text-caption)',color:'var(--text-placeholder)',marginBottom:6}}>Today's prompt</div>
+          <div style={{font:'var(--text-prompt)',color:'var(--green-700)',fontStyle:'italic'}}>Describe a color you've never named.</div>
+        </Card>
+        <Card interactive style={{width:260}}>
+          <div style={{font:'var(--text-poem)',fontStyle:'italic',color:'var(--ink-1)'}}>The kettle sighs before I do —<br/>steam finding the window first.</div>
+        </Card>
+      </div>
+      <div className="row" style={{alignItems:'center'}}>
+        <Avatar name="Rosa Ndiaye" />
+        <Avatar name="Kai Ito" size={56} />
+        <Avatar name="Belle" size={28} />
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
+</body></html>

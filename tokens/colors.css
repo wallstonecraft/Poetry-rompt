@@ -1,0 +1,78 @@
+/* Poetry Prompt — color tokens
+   "Soft Dorset greens": muted sage/moss greens evoking English pasture and
+   hedgerow, paired with warm paper neutrals and a dusty heather accent for
+   moments of feeling (favorites, streaks, highlights). Low-chroma, warm-leaning
+   overall — nothing saturated, nothing cold. */
+
+:root {
+  /* ---- Base neutrals (warm paper) ---- */
+  --paper-0: oklch(99% 0.004 90);   /* app background */
+  --paper-1: oklch(97% 0.008 92);   /* sunken sections */
+  --paper-2: oklch(94.5% 0.011 95); /* card surface */
+  --paper-3: oklch(90% 0.014 95);   /* hairline borders, dividers */
+
+  --ink-1: oklch(24% 0.018 150);    /* primary text — near-black, faint green cast */
+  --ink-2: oklch(42% 0.022 145);    /* secondary text */
+  --ink-3: oklch(52% 0.02 140);     /* placeholder / disabled text */
+
+  /* ---- Sage green (brand primary) ---- */
+  --green-50:  oklch(95% 0.025 145);
+  --green-100: oklch(90% 0.045 145);
+  --green-300: oklch(76% 0.07 145);
+  --green-500: oklch(53% 0.085 145);  /* primary */
+  --green-600: oklch(48% 0.085 146);  /* primary hover/pressed */
+  --green-700: oklch(38% 0.075 148);  /* deep moss — dark surfaces, text-on-light emphasis */
+  --green-900: oklch(24% 0.05 150);
+
+  /* ---- Heather (accent — same chroma/lightness family as green, shifted hue) ---- */
+  --heather-100: oklch(90% 0.045 350);
+  --heather-300: oklch(76% 0.07 350);
+  --heather-500: oklch(56% 0.085 350);
+  --heather-600: oklch(48% 0.085 350);
+
+  /* ---- Semantic (matched chroma/lightness to brand, hue-shifted) ---- */
+  --amber-500: oklch(72% 0.09 80);    /* warning / streak-at-risk */
+  --amber-100: oklch(93% 0.04 85);
+  --terracotta-500: oklch(55% 0.09 30); /* error / destructive */
+  --terracotta-100: oklch(92% 0.03 30);
+
+  /* ---- Semantic aliases ---- */
+  --bg-app: var(--paper-0);
+  --bg-sunken: var(--paper-1);
+  --surface-card: var(--paper-2);
+  --border-hairline: var(--paper-3);
+
+  --text-primary: var(--ink-1);
+  --text-secondary: var(--ink-2);
+  --text-placeholder: var(--ink-3);
+  --text-on-brand: var(--paper-0);
+
+  --brand-primary: var(--green-500);
+  --brand-primary-hover: var(--green-600);
+  --brand-primary-press: var(--green-700);
+  --brand-subtle: var(--green-50);
+  --brand-subtle-border: var(--green-100);
+
+  --accent: var(--heather-500);
+  --accent-hover: var(--heather-600);
+  --accent-subtle: var(--heather-100);
+
+  --state-warning: var(--amber-500);
+  --state-warning-subtle: var(--amber-100);
+  --state-error: var(--terracotta-500);
+  --state-error-subtle: var(--terracotta-100);
+  --state-success: var(--green-500);
+  --state-success-subtle: var(--green-50);
+
+  --focus-ring: var(--green-500);
+}
+
+/* Contrast check (WCAG 2.1 AA — re-verify if any value above changes):
+   paper-0 text on green-500 button background → 4.9:1 (passes 4.5:1)
+   ink-3 placeholder/disabled text on paper-0    → 5.3:1 (passes 4.5:1)
+   ink-2 secondary text on paper-0               → 8.1:1
+   ink-1 primary text on paper-0                 → 15.9:1
+   green-700 text/surface on paper-0             → 9.4:1
+   green-500 was 56% and ink-3 was 60% originally — both failed the 4.5:1
+   normal-text threshold (4.36:1 and 3.80:1) and were darkened to the
+   values above; nothing else in the palette needed adjustment. */

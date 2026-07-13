@@ -1,0 +1,18 @@
+@import url('./tokens/fonts.css');
+@import url('./tokens/colors.css');
+@import url('./tokens/typography.css');
+@import url('./tokens/spacing.css');
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font: var(--text-body);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--brand-primary-press); text-decoration: none; }
+a:hover { color: var(--brand-primary); text-decoration: underline; }
+
+/* Poem editor placeholder (first line, shown only when the poem is empty) */
+[data-placeholder]:empty:before { content: attr(data-placeholder); color: var(--ink-3); }

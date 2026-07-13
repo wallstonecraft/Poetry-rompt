@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Poetry Prompt — Mobile App</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  body { margin: 0; background: var(--bg-sunken); font-family: var(--font-sans); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 0; }
+  [data-placeholder]:empty:before { content: attr(data-placeholder); color: var(--ink-3); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/plain" id="app-jsx">
+const { useState, useRef, useEffect } = React;
+
+/* ============================================================
+   iOS device frame (inlined from ios-frame.jsx to avoid an
+   async-load race between the two babel <script> tags).
+   ============================================================ */
+
+function IOSStatusBar({ dark = false, time = '9:41' }) {
+  const c = dark ? '#fff' : '#000';
+  return (
+    <div style={{ display: 'flex', gap: 154, alignItems: 'center', justifyContent: 'center', padding: '21px 24px 19px', boxSizing: 'border-box', position: 'relative', zIndex: 20, width: '100%' }}>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 1.5 }}>
+        <span style={{ fontFamily: '-apple-system, "SF Pro", system-ui', fontWeight: 590, fontSize: 17, lineHeight: '22px', color: c }}>{time}</span>
+      </div>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, paddingTop: 1, paddingRight: 1 }}>
+        <svg width="19" height="12" viewBox="0 0 19 12">
+          <rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7" fill={c}/>
+          <rect x="4.8" y="5" width="3.2" height="7" rx="0.7" fill={c}/>
+          <rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7" fill={c}/>
+          <rect x="14.4" y="0" width="3.2" height="12" rx="0.7" fill={c}/>
+        </svg>
+        <svg width="17" height="12" viewBox="0 0 17 12">
+          <path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z" fill={c}/>
+          <path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z" fill={c}/>
+          <circle cx="8.5" cy="10.5" r="1.5" fill={c}/>
+        </svg>
+        <svg width="27" height="13" viewBox="0 0 27 13">
+          <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke={c} strokeOpacity="0.35" fill="none"/>
+          <rect x="2" y="2" width="20" height="9" rx="2" fill={c}/>
+          <path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill={c} fillOpacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function IOSDevice({ children, width = 402, height = 874, dark = false, title, keyboard = false }) {
+  return (
+    <div style={{ width, height, borderRadius: 48, overflow: 'hidden', position: 'relative', background: dark ? '#000' : '#F2F2F7', boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)', fontFamily: '-apple-system, system-ui, sans-serif', WebkitFontSmoothing: 'antialiased' }}>
+      <div style={{ position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)', width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50 }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+        <IOSStatusBar dark={dark} />
+      </div>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {title !== undefined && (
+          <div style={{ padding: '62px 16px 10px', fontFamily: '-apple-system, system-ui', fontSize: 34, fontWeight: 700, color: dark ? '#fff' : '#000' }}>{title}</div>
+        )}
+        <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+      </div>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60, height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', paddingBottom: 8, pointerEvents: 'none' }}>
+        <div style={{ width: 139, height: 5, borderRadius: 100, background: dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)' }} />
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Poetry Prompt component primitives, inlined for this mockup.
+   Source of truth for each lives in /components/**; keep in sync
+   if you edit those files.
+   ============================================================ */
+
+function Button({ children, variant = 'primary', size = 'md', disabled = false, icon = null, onClick, style }) {
+  const [hover, setHover] = useState(false);
+  const [active, setActive] = useState(false);
+  const sz = size === 'sm' ? { padding: '7px 14px', font: '600 13px/1 var(--font-sans)', radius: 'var(--radius-sm)' } : { padding: '10px 20px', font: 'var(--text-button)', radius: 'var(--radius-md)' };
+  let v;
+  if (disabled) v = { background: 'var(--paper-2)', color: 'var(--text-placeholder)', border: '1px solid var(--border-hairline)' };
+  else if (variant === 'secondary') v = { background: 'var(--brand-subtle)', color: 'var(--green-700)', border: '1px solid var(--brand-subtle-border)' };
+  else if (variant === 'ghost') v = { background: 'transparent', color: 'var(--green-700)', border: '1px solid transparent' };
+  else if (variant === 'destructive') v = { background: 'var(--state-error)', color: 'var(--paper-0)', border: '1px solid transparent' };
+  else v = { background: 'var(--brand-primary)', color: 'var(--text-on-brand)', border: '1px solid transparent' };
+  let bg = v.background;
+  if (!disabled && hover && variant === 'primary') bg = 'var(--brand-primary-hover)';
+  if (!disabled && active && variant === 'primary') bg = 'var(--brand-primary-press)';
+  if (!disabled && hover && variant === 'secondary') bg = 'var(--brand-subtle-border)';
+  if (!disabled && hover && variant === 'ghost') bg = 'var(--paper-1)';
+  return (
+    <button disabled={disabled} onClick={onClick}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => { setHover(false); setActive(false); }}
+      onMouseDown={() => setActive(true)} onMouseUp={() => setActive(false)}
+      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, font: sz.font, padding: sz.padding, borderRadius: sz.radius, cursor: disabled ? 'default' : 'pointer', transition: 'background 120ms var(--ease-standard), transform 120ms var(--ease-standard)', transform: !disabled && active ? 'scale(0.97)' : 'scale(1)', ...v, background: bg, ...style }}>
+      {icon}{children}
+    </button>
+  );
+}
+
+function IconButton({ children, variant = 'ghost', size = 44, active = false, 'aria-label': ariaLabel, onClick, style }) {
+  const [hover, setHover] = useState(false);
+  const bg = variant === 'filled' ? (hover ? 'var(--brand-primary-hover)' : 'var(--brand-primary)') : (active ? 'var(--brand-subtle)' : hover ? 'var(--paper-1)' : 'transparent');
+  const color = variant === 'filled' ? 'var(--text-on-brand)' : active ? 'var(--green-700)' : 'var(--ink-1)';
+  return (
+    <button aria-label={ariaLabel} onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ width: size, height: size, borderRadius: 'var(--radius-full)', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: bg, color, cursor: 'pointer', transition: 'background 120ms var(--ease-standard)', ...style }}>
+      {children}
+    </button>
+  );
+}
+
+function Input({ label, placeholder, value, onChange, type = 'text', error, style }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 6, ...style }}>
+      {label && <span style={{ font: 'var(--text-label)', letterSpacing: 'var(--tracking-label)', color: 'var(--text-secondary)' }}>{label}</span>}
+      <input type={type} value={value} placeholder={placeholder} onChange={onChange} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={{ font: 'var(--text-body)', padding: '11px 14px', borderRadius: 'var(--radius-md)', border: `1.5px solid ${error ? 'var(--state-error)' : focused ? 'var(--brand-primary)' : 'var(--border-hairline)'}`, background: 'var(--paper-0)', color: 'var(--text-primary)', outline: 'none', transition: 'border-color 120ms var(--ease-standard)' }} />
+      {error && <span style={{ font: 'var(--text-caption)', color: 'var(--state-error)' }}>{error}</span>}
+    </label>
+  );
+}
+
+function TextArea({ label, placeholder, value, onChange, rows = 6, poemStyle = false, style }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 6, ...style }}>
+      {label && <span style={{ font: 'var(--text-label)', letterSpacing: 'var(--tracking-label)', color: 'var(--text-secondary)' }}>{label}</span>}
+      <textarea value={value} placeholder={placeholder} rows={rows} onChange={onChange} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={{ font: poemStyle ? 'var(--text-poem)' : 'var(--text-body)', padding: 14, borderRadius: 'var(--radius-md)', border: `1.5px solid ${focused ? 'var(--brand-primary)' : 'var(--border-hairline)'}`, background: 'var(--paper-0)', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', transition: 'border-color 120ms var(--ease-standard)' }} />
+    </label>
+  );
+}
+
+function FormatButton({ label, active, style, onMouseDown }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      onMouseDown={onMouseDown}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      aria-label={label.name}
+      style={{
+        width: 34, height: 34, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
+        background: active ? 'var(--brand-subtle)' : hover ? 'var(--paper-1)' : 'transparent',
+        color: active ? 'var(--green-700)' : 'var(--ink-1)',
+        font: '600 15px var(--font-sans)', fontStyle: label.italic ? 'italic' : 'normal',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'background 120ms var(--ease-standard)', ...style,
+      }}
+    >
+      {label.char}
+    </button>
+  );
+}
+
+function PoemEditor({ value, onChange, placeholder }) {
+  const editorRef = useRef(null);
+  const [active, setActive] = useState({ bold: false, italic: false });
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    try { document.execCommand('defaultParagraphSeparator', false, 'br'); } catch (err) {}
+  }, []);
+
+  const refreshActive = () => {
+    try {
+      setActive({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+      });
+    } catch (err) {}
+  };
+
+  const applyFormat = (cmd) => (e) => {
+    e.preventDefault();
+    document.execCommand(cmd, false, null);
+    refreshActive();
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+        <FormatButton label={{ name: 'Bold', char: 'B' }} active={active.bold} onMouseDown={applyFormat('bold')} />
+        <FormatButton label={{ name: 'Italic', char: 'I', italic: true }} active={active.italic} onMouseDown={applyFormat('italic')} />
+      </div>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        data-placeholder={placeholder}
+        onInput={() => onChange(editorRef.current.innerHTML)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onKeyUp={refreshActive}
+        onMouseUp={refreshActive}
+        dangerouslySetInnerHTML={{ __html: value }}
+        style={{
+          font: 'var(--text-poem)', minHeight: 260, padding: 14, borderRadius: 'var(--radius-md)',
+          border: `1.5px solid ${focused ? 'var(--brand-primary)' : 'var(--border-hairline)'}`,
+          background: 'var(--paper-0)', color: 'var(--text-primary)', outline: 'none',
+          whiteSpace: 'pre-wrap', transition: 'border-color 120ms var(--ease-standard)',
+        }}
+      />
+    </div>
+  );
+}
+
+function Switch({ checked = false, onChange, label, style }) {
+  return (
+    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer', ...style }}>
+      {label && <span style={{ font: 'var(--text-body)', color: 'var(--text-primary)' }}>{label}</span>}
+      <span onClick={() => onChange && onChange(!checked)} style={{ width: 44, height: 26, borderRadius: 'var(--radius-full)', background: checked ? 'var(--brand-primary)' : 'var(--paper-3)', position: 'relative', transition: 'background 200ms var(--ease-standard)', flexShrink: 0 }}>
+        <span style={{ position: 'absolute', top: 3, left: checked ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: 'var(--paper-0)', boxShadow: 'var(--shadow-xs)', transition: 'left 200ms var(--ease-standard)' }} />
+      </span>
+    </label>
+  );
+}
+
+function Radio({ label, checked = false, onChange, style }) {
+  return (
+    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer', ...style }}>
+      <span onClick={() => onChange && onChange()} style={{ width: 20, height: 20, borderRadius: '50%', border: `1.5px solid ${checked ? 'var(--brand-primary)' : 'var(--border-hairline)'}`, background: 'var(--paper-0)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        {checked && <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--brand-primary)' }} />}
+      </span>
+      {label && <span style={{ font: 'var(--text-body)', color: 'var(--text-primary)' }}>{label}</span>}
+    </label>
+  );
+}
+
+function Badge({ children, tone = 'neutral', style }) {
+  const TONES = {
+    neutral: { bg: 'var(--paper-2)', color: 'var(--text-secondary)' },
+    brand: { bg: 'var(--brand-subtle)', color: 'var(--green-700)' },
+    accent: { bg: 'var(--accent-subtle)', color: 'var(--heather-600)' },
+    warning: { bg: 'var(--state-warning-subtle)', color: 'oklch(40% 0.08 80)' },
+    error: { bg: 'var(--state-error-subtle)', color: 'var(--state-error)' },
+  };
+  const t = TONES[tone] || TONES.neutral;
+  return <span style={{ display: 'inline-flex', alignItems: 'center', font: 'var(--text-caption-medium)', letterSpacing: 'var(--tracking-caption)', padding: '3px 10px', borderRadius: 'var(--radius-full)', background: t.bg, color: t.color, ...style }}>{children}</span>;
+}
+
+function Tag({ children, selected = false, onClick, onRemove, style }) {
+  return (
+    <span onClick={onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: 'var(--text-caption-medium)', padding: '6px 12px', borderRadius: 'var(--radius-full)', background: selected ? 'var(--brand-primary)' : 'var(--paper-1)', color: selected ? 'var(--text-on-brand)' : 'var(--text-secondary)', border: `1px solid ${selected ? 'transparent' : 'var(--border-hairline)'}`, cursor: onClick ? 'pointer' : 'default', transition: 'all 120ms var(--ease-standard)', ...style }}>
+      {children}
+      {onRemove && <span onClick={(e) => { e.stopPropagation(); onRemove(); }} style={{ display: 'inline-flex', opacity: 0.7 }}>
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+      </span>}
+    </span>
+  );
+}
+
+function Toast({ message, tone = 'default', visible = true }) {
+  const TONES = { success: 'var(--green-700)', warning: 'oklch(45% 0.08 80)', error: 'var(--state-error)', default: 'var(--ink-1)' };
+  return (
+    <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: `translateX(-50%) translateY(${visible ? '0' : '12px'})`, opacity: visible ? 1 : 0, pointerEvents: 'none', transition: 'all 200ms var(--ease-standard)', display: 'flex', alignItems: 'center', gap: 12, background: TONES[tone] || TONES.default, color: 'var(--paper-0)', padding: '12px 18px', borderRadius: 'var(--radius-md)', font: 'var(--text-body-medium)', boxShadow: 'var(--shadow-md)', whiteSpace: 'nowrap', zIndex: 80 }}>
+      {message}
+    </div>
+  );
+}
+
+function Card({ children, padding = 20, interactive = false, onClick, style }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div onClick={onClick} onMouseEnter={() => interactive && setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', padding, boxShadow: interactive && hover ? 'var(--shadow-md)' : 'var(--shadow-sm)', transform: interactive && hover ? 'translateY(-2px)' : 'none', transition: 'all 200ms var(--ease-standard)', cursor: interactive ? 'pointer' : 'default', ...style }}>
+      {children}
+    </div>
+  );
+}
+
+function Tabs({ tabs = [], value, onChange, style }) {
+  return (
+    <div style={{ display: 'flex', gap: 4, background: 'var(--paper-1)', padding: 4, borderRadius: 'var(--radius-md)', ...style }}>
+      {tabs.map((t) => {
+        const active = t.value === value;
+        return (
+          <button key={t.value} onClick={() => onChange && onChange(t.value)}
+            style={{ flex: 1, padding: '8px 14px', border: 'none', borderRadius: 'var(--radius-sm)', background: active ? 'var(--paper-0)' : 'transparent', color: active ? 'var(--text-primary)' : 'var(--text-secondary)', font: active ? '600 14px var(--font-sans)' : '500 14px var(--font-sans)', boxShadow: active ? 'var(--shadow-xs)' : 'none', cursor: 'pointer', transition: 'all 120ms var(--ease-standard)' }}>
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Dialog({ open, title, children, onClose, actions }) {
+  if (!open) return null;
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: 'oklch(20% 0.02 150 / 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--paper-0)', borderRadius: 'var(--radius-xl)', padding: 24, width: 300, boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {title && <div style={{ font: 'var(--text-headline)', color: 'var(--text-primary)' }}>{title}</div>}
+        <div style={{ font: 'var(--text-body)', color: 'var(--text-secondary)' }}>{children}</div>
+        {actions && <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>{actions}</div>}
+      </div>
+    </div>
+  );
+}
+
+function TopAppBar({ title, onBack, right, style }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 12px', background: 'var(--bg-app)', borderBottom: '1px solid var(--border-hairline)', ...style }}>
+      {onBack && (
+        <button onClick={onBack} aria-label="Back" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--ink-1)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
+      )}
+      <div style={{ flex: 1, font: 'var(--text-title)', color: 'var(--text-primary)' }}>{title}</div>
+      {right}
+    </div>
+  );
+}
+
+function BottomTabBar({ items = [], value, onChange, style }) {
+  return (
+    <div style={{ display: 'flex', background: 'var(--bg-app)', borderTop: '1px solid var(--border-hairline)', padding: '10px 8px calc(10px + env(safe-area-inset-bottom, 0px))', ...style }}>
+      {items.map((it) => {
+        const active = it.value === value;
+        return (
+          <button key={it.value} onClick={() => onChange && onChange(it.value)}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, border: 'none', background: 'none', cursor: 'pointer', color: active ? 'var(--green-700)' : 'var(--ink-3)' }}>
+            {it.icon}
+            <span style={{ font: active ? '600 11px var(--font-sans)' : '500 11px var(--font-sans)' }}>{it.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function FAB({ children, onClick, style }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', background: hover ? 'var(--brand-primary-hover)' : 'var(--brand-primary)', color: 'var(--text-on-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-md)', cursor: 'pointer', transition: 'background 120ms var(--ease-standard), transform 120ms var(--ease-standard)', transform: hover ? 'scale(1.04)' : 'scale(1)', ...style }}>
+      {children}
+    </button>
+  );
+}
+
+const AVATAR_COLORS = ['var(--green-300)', 'var(--green-500)', 'var(--heather-300)', 'var(--heather-500)', 'var(--green-700)'];
+function hashColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+function Avatar({ name = '', size = 40, src, style }) {
+  const initials = name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', background: src ? `center/cover no-repeat url(${src})` : hashColor(name), color: 'var(--paper-0)', display: 'flex', alignItems: 'center', justifyContent: 'center', font: `500 ${Math.round(size * 0.4)}px var(--font-sans)`, flexShrink: 0, ...style }}>
+      {!src && initials}
+    </div>
+  );
+}
+
+function FollowButton({ following = false, onChange, size = 'sm', style }) {
+  const [hover, setHover] = useState(false);
+  const pad = size === 'sm' ? '6px 14px' : '10px 20px';
+  const font = size === 'sm' ? '600 13px var(--font-sans)' : 'var(--text-button)';
+  let bg, color, border;
+  if (following) { bg = hover ? 'var(--state-error-subtle)' : 'transparent'; color = hover ? 'var(--state-error)' : 'var(--text-secondary)'; border = `1px solid ${hover ? 'var(--state-error)' : 'var(--border-hairline)'}`; }
+  else { bg = hover ? 'var(--brand-primary-hover)' : 'var(--brand-primary)'; color = 'var(--text-on-brand)'; border = '1px solid transparent'; }
+  return (
+    <button onClick={(e) => { e.stopPropagation(); onChange && onChange(!following); }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: pad, borderRadius: 'var(--radius-full)', font, background: bg, color, border, cursor: 'pointer', transition: 'all 120ms var(--ease-standard)', minWidth: 92, ...style }}>
+      {following ? (hover ? 'Unfollow' : 'Following') : 'Follow'}
+    </button>
+  );
+}
+
+function ReportAction({ onReport, style }) {
+  const [open, setOpen] = useState(false);
+  const REASONS = ['Spam', 'Harassment or hate', 'Plagiarism', 'Something else'];
+  return (
+    <div style={{ position: 'relative', ...style }}>
+      <button aria-label="More options" onClick={() => setOpen((o) => !o)}
+        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--ink-3)', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /><circle cx="19" cy="12" r="1.6" fill="currentColor" /></svg>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', right: 0, top: 36, background: 'var(--paper-0)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-md)', border: '1px solid var(--border-hairline)', minWidth: 176, overflow: 'hidden', zIndex: 30 }}>
+          {REASONS.map((r) => (
+            <div key={r} onClick={() => { setOpen(false); onReport && onReport(r); }} style={{ padding: '10px 14px', font: 'var(--text-body)', color: 'var(--text-primary)', cursor: 'pointer' }}>{r}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyState({ title, body, action, style }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '56px 24px', ...style }}>
+      <div style={{ font: 'var(--text-headline)', fontStyle: 'italic', color: 'var(--ink-2)', marginBottom: 8 }}>{title}</div>
+      {body && <div style={{ font: 'var(--text-body)', color: 'var(--text-placeholder)', marginBottom: action ? 20 : 0 }}>{body}</div>}
+      {action}
+    </div>
+  );
+}
+
+/* ---------- icons ---------- */
+const Icon = {
+  home: () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11l8-7 8 7v9a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>),
+  feed: () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16l-7-4-7 4z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>),
+  user: () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M4 20c1.6-4 5-6 8-6s6.4 2 8 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>),
+  gear: () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 00-2-1.2L14 3h-4l-.6 2.6a7 7 0 00-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9c.6.5 1.3.9 2 1.2L10 21h4l.6-2.6c.7-.3 1.4-.7 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>),
+  plus: () => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>),
+  heart: (filled) => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.6-9.5-9C.7 8.2 2.4 4.5 6 4.5c2 0 3.4 1.1 4 2.4.6-1.3 2-2.4 4-2.4 3.6 0 5.3 3.7 3.5 7.5-2.5 4.4-9.5 9-9.5 9z" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8"/></svg>),
+  share: () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M7 8l5-5 5 5M5 15v3a2 2 0 002 2h10a2 2 0 002-2v-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>),
+  bell: () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 0112 0c0 5 2 6 2 6H4s2-1 2-6z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M9.5 20a2.5 2.5 0 005 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>),
+};
+
+/* ---------- sample data ---------- */
+const ME = { name: 'Rosa Fenwick', bio: 'Notices small weather.' };
+
+const POETS = {
+  june: { name: 'June Alcott', bio: 'Writes between shifts.' },
+  tomas: { name: 'Tomas Reyes', bio: 'One poem a week, no more.' },
+};
+
+const MY_POEMS = [
+  { id: 1, title: 'Kettle', excerpt: 'The kettle sighs before I do —\nsteam finding the window first.', full: 'The kettle sighs before I do —\nsteam finding the window first.\n\nI wait for the click,\nthe small mercy of something\nfinished on time,\nwhile the light outside\nstill can\u2019t decide on morning.', tags: ['Nature', 'Quiet'], favorite: true, date: 'Jul 3', status: 'published' },
+  { id: 2, title: 'Unsent', excerpt: 'I keep the letter in a drawer\nlike a seed that changed its mind.', full: 'I keep the letter in a drawer\nlike a seed that changed its mind.\n\nSome things grow better\nin the dark, unread \u2014\nor so I tell myself\nevery time I close it.', tags: ['Grief'], favorite: false, date: 'Jul 1', status: 'draft' },
+  { id: 3, title: 'Errand', excerpt: 'Between the bank and the bakery\nI remembered I was alive.', full: 'Between the bank and the bakery\nI remembered I was alive.\n\nNo reason \u2014\njust the smell of bread\nand a pigeon deciding\nnot to fly.', tags: ['Nature', 'Joy'], favorite: true, date: 'Jun 28', status: 'published' },
+];
+
+const FEED_POEMS = [
+  { id: 101, title: 'Kettle', excerpt: 'The kettle sighs before I do —\nsteam finding the window first.', full: 'The kettle sighs before I do —\nsteam finding the window first.\n\nI wait for the click,\nthe small mercy of something\nfinished on time,\nwhile the light outside\nstill can\u2019t decide on morning.', tags: ['Nature', 'Quiet'], date: '2h ago', author: { id: 'me', name: 'Rosa Fenwick' } },
+  { id: 102, title: 'Night shift', excerpt: 'The vending machine hums the only\nlullaby left on the floor.', full: 'The vending machine hums the only\nlullaby left on the floor.\n\nSomewhere a monitor agrees\nwith itself, steadily,\nand I write this on the back\nof a form no one will read.', tags: ['Work'], date: '5h ago', author: POETS.june },
+  { id: 103, title: 'Directions', excerpt: 'Turn left at the year we stopped\ntalking, then straight on.', full: 'Turn left at the year we stopped\ntalking, then straight on.\n\nYou\u2019ll pass a version of me\nstill waiting at the corner \u2014\ndon\u2019t slow down, I told him\nnot to expect you.', tags: ['Grief'], date: '1d ago', author: POETS.tomas },
+];
+
+const NOTIFICATIONS = [
+  { id: 0, type: 'streak', text: 'Your streak ends tonight — open the app again to keep it going.', time: '7:00pm' },
+  { id: 1, type: 'social', author: POETS.june, text: 'sat with your poem "Kettle"', time: '2h ago' },
+  { id: 2, type: 'social', author: POETS.tomas, text: 'followed you', time: '1d ago' },
+];
+
+const STATS = { streak: 7, written: 12, read: 48 };
+
+const TODAYS_PROMPT = "Describe a color you've never named.";
+
+const PAST_PROMPTS = [
+  { date: 'Jul 6', text: "Describe a color you've never named." },
+  { date: 'Jul 5', text: 'Write about a door you never opened.' },
+  { date: 'Jul 4', text: 'What does your street sound like at 3am?' },
+  { date: 'Jul 3', text: 'A meal that meant more than food.' },
+  { date: 'Jul 2', text: 'Something you kept longer than you should have.' },
+  { date: 'Jul 1', text: 'Write to someone you\u2019ve lost touch with.' },
+];
+
+const CATEGORIES = [
+  {
+    id: 'grief',
+    label: 'Grief',
+    prompts: [
+      'Something you kept longer than you should have.',
+      'Write to someone you\u2019ve lost touch with.',
+      'The last ordinary conversation you remember.',
+      'A room that still feels like theirs.',
+    ],
+  },
+  {
+    id: 'love',
+    label: 'Love',
+    prompts: [
+      'The smallest thing someone has done for you.',
+      'A love you never said out loud.',
+      'Something you\u2019d only admit in a poem.',
+      'The shape of a hand you know by heart.',
+    ],
+  },
+  {
+    id: 'family',
+    label: 'Family',
+    prompts: [
+      'A meal that meant more than food.',
+      'A phrase only your family uses.',
+      'What you inherited that isn\u2019t an object.',
+      'The chair no one else sits in.',
+    ],
+  },
+  {
+    id: 'nature',
+    label: 'Nature',
+    prompts: [
+      'The last tree you noticed on purpose.',
+      'Weather that matched how you felt.',
+      'Something small and alive you almost stepped on.',
+      'A season changing its mind.',
+    ],
+  },
+  {
+    id: 'joy',
+    label: 'Joy',
+    prompts: [
+      'A moment of joy no one else saw.',
+      'The sound of a good day starting.',
+      'Something silly you refuse to give up.',
+      'Write about laughing until it hurt.',
+    ],
+  },
+  {
+    id: 'change',
+    label: 'Change',
+    prompts: [
+      'The version of you from five years ago.',
+      'A habit you\u2019re still unlearning.',
+      'Something you outgrew without noticing.',
+      'The last big decision you made quietly.',
+    ],
+  },
+];
+
+const COMPETITIONS = [
+  {
+    id: 'winter-light',
+    title: 'Winter Light Prize',
+    theme: 'Write about light in an unlikely place.',
+    deadline: 'Closes Aug 15',
+    prize: 'Featured on the home screen for a week',
+  },
+  {
+    id: 'small-things',
+    title: 'Small Things Contest',
+    theme: 'A poem in under 10 lines about something ordinary.',
+    deadline: 'Closes Sep 1',
+    prize: 'Published in the community anthology',
+  },
+  {
+    id: 'first-lines',
+    title: 'First Lines Open',
+    theme: 'Write a poem that begins with a question.',
+    deadline: 'Closes Sep 20',
+    prize: 'Read live at the community gathering',
+  },
+];
+
+const FEATURED_POEM = {
+  id: 'featured-1',
+  title: 'Hope is the thing with feathers',
+  excerpt: 'Hope is the thing with feathers \u2014\nthat perches in the soul \u2014',
+  full: 'Hope is the thing with feathers \u2014\nthat perches in the soul \u2014\nand sings the tune without the words \u2014\nand never stops \u2014 at all \u2014\n\nAnd sweetest \u2014 in the gale \u2014 is heard \u2014\nand sore must be the storm \u2014\nthat could abash the little bird\nthat kept so many warm \u2014',
+  tags: ['Classic'],
+  date: 'Emily Dickinson, 1861',
+  author: { name: 'Emily Dickinson' },
+  featured: true,
+};
+
+const WEEKLY_FEATURE = {
+  poet: POETS.june,
+  poem: {
+    id: 201,
+    title: 'Night shift',
+    excerpt: 'The vending machine hums the only\nlullaby left on the floor.',
+    full: 'The vending machine hums the only\nlullaby left on the floor.\n\nSomewhere a monitor agrees\nwith itself, steadily,\nand I write this on the back\nof a form no one will read.',
+    tags: ['Work'],
+    date: 'This week',
+    author: POETS.june,
+  },
+  conversation: [
+    { q: 'What pulled you toward this poem?', a: 'I wrote it at 4am on a night shift, on the back of an intake form. I wasn\u2019t trying to make anything \u2014 I just needed somewhere to put the quiet.' },
+    { q: 'Do you write only at work?', a: 'Mostly. My best lines show up when I\u2019m too tired to perform \u2014 there\u2019s no room left for anything but the true sentence.' },
+  ],
+};
+
+/* ---------- shared bits ---------- */
+function PromptHero({ onNewPoem }) {
+  return (
+    <Card style={{ background: 'var(--green-700)', marginBottom: 20 }}>
+      <div style={{ font: 'var(--text-caption)', color: 'var(--green-100)', marginBottom: 8, letterSpacing: 'var(--tracking-caption)' }}>TODAY'S PROMPT</div>
+      <div style={{ font: 'var(--text-prompt)', fontStyle: 'italic', color: 'var(--paper-0)', marginBottom: 16 }}>{TODAYS_PROMPT}</div>
+      <Button variant="secondary" onClick={onNewPoem} style={{ background: 'var(--paper-0)', color: 'var(--green-700)' }}>Start writing</Button>
+    </Card>
+  );
+}
+
+function LikeButton({ liked, onChange, style }) {
+  return (
+    <button aria-label={liked ? 'Unlike' : 'Like'} onClick={(e) => { e.stopPropagation(); onChange(!liked); }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none', background: 'none', cursor: 'pointer', color: liked ? 'var(--heather-500)' : 'var(--ink-3)', padding: '6px 4px', ...style }}>
+      <Icon.heart filled={liked} />
+    </button>
+  );
+}
+
+function ReadFullPoemLink({ onOpen, style }) {
+  return (
+    <span onClick={(e) => { e.stopPropagation(); onOpen(); }}
+      style={{ font: 'var(--text-caption-medium)', color: 'var(--green-700)', cursor: 'pointer', ...style }}>
+      Read the full poem
+    </span>
+  );
+}
+
+function FeedPoemCard({ poem, onOpen, onOpenPoet }) {
+  const [liked, setLiked] = useState(false);
+  return (
+    <Card interactive onClick={() => onOpen(poem)} style={{ marginBottom: 12 }}>
+      <div onClick={(e) => { e.stopPropagation(); onOpenPoet(poem.author); }} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <Avatar name={poem.author.name} size={28} />
+        <span style={{ font: 'var(--text-caption-medium)', color: 'var(--text-secondary)' }}>{poem.author.name}</span>
+        <span style={{ marginLeft: 'auto', font: 'var(--text-caption)', color: 'var(--text-placeholder)' }}>{poem.date}</span>
+      </div>
+      <div style={{ font: 'var(--text-title)', color: 'var(--text-primary)', marginBottom: 8 }}>{poem.title}</div>
+      <div style={{ font: 'var(--text-poem)', color: 'var(--ink-2)', whiteSpace: 'pre-line', marginBottom: poem.tags.length ? 10 : 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{poem.excerpt}</div>
+      {poem.tags.length > 0 && <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>{poem.tags.map(t => <Tag key={t} style={{ padding: '3px 9px' }}>{t}</Tag>)}</div>}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, marginLeft: -4 }}>
+        <LikeButton liked={liked} onChange={setLiked} />
+        <ReadFullPoemLink onOpen={() => onOpen(poem)} />
+      </div>
+    </Card>
+  );
+}
+
+function LibraryPoemCard({ poem, onOpen }) {
+  const [liked, setLiked] = useState(poem.favorite || false);
+  return (
+    <Card interactive onClick={() => onOpen(poem)} style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <div style={{ font: 'var(--text-title)', color: 'var(--text-primary)' }}>{poem.title}</div>
+        {poem.status === 'draft' && <Badge tone="neutral">Draft</Badge>}
+      </div>
+      <div style={{ font: 'var(--text-poem)', color: 'var(--ink-2)', whiteSpace: 'pre-line', marginBottom: 10 }}>{poem.excerpt}</div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: poem.status === 'published' ? 10 : 0 }}>
+        {poem.tags.map(t => <Tag key={t} style={{ padding: '3px 9px' }}>{t}</Tag>)}
+        <span style={{ marginLeft: 'auto', font: 'var(--text-caption)', color: 'var(--text-placeholder)' }}>{poem.status === 'draft' ? 'Saved ' + poem.date : poem.date}</span>
+      </div>
+      {poem.status === 'published' && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, marginLeft: -4 }}>
+          <LikeButton liked={liked} onChange={setLiked} />
+          <ReadFullPoemLink onOpen={() => onOpen(poem)} />
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/* ---------- screens ---------- */
+function WeeklyFeaturedCard({ feature, onOpen, onOpenPoet }) {
+  return (
+    <Card interactive onClick={onOpen} style={{ marginBottom: 16 }}>
+      <div style={{ font: 'var(--text-caption-medium)', color: 'var(--green-700)', letterSpacing: 'var(--tracking-caption)', marginBottom: 12 }}>WEEKLY FEATURED POET</div>
+      <div onClick={(e) => { e.stopPropagation(); onOpenPoet(feature.poet); }} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <Avatar name={feature.poet.name} size={28} />
+        <span style={{ font: 'var(--text-caption-medium)', color: 'var(--text-secondary)' }}>{feature.poet.name}</span>
+      </div>
+      <div style={{ font: 'var(--text-poem)', color: 'var(--ink-1)', whiteSpace: 'pre-line', marginBottom: 10 }}>{feature.poem.excerpt}</div>
+      <div style={{ font: 'var(--text-caption-medium)', color: 'var(--green-700)' }}>Read the poem and the conversation</div>
+    </Card>
+  );
+}
+
+function DailyPoetCard({ poem, onOpen }) {
+  return (
+    <Card interactive onClick={() => onOpen(poem)} style={{ marginBottom: 20 }}>
+      <div style={{ font: 'var(--text-caption-medium)', color: 'var(--heather-600)', letterSpacing: 'var(--tracking-caption)', marginBottom: 12 }}>DAILY INSPIRATION</div>
+      <div style={{ font: 'var(--text-poem)', color: 'var(--ink-1)', whiteSpace: 'pre-line', marginBottom: 10 }}>{poem.excerpt}</div>
+      <div style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)' }}>{poem.date}</div>
+    </Card>
+  );
+}
+
+function StatsCard({ stats }) {
+  const items = [
+    { label: 'Day streak', value: stats.streak },
+    { label: 'Poems written', value: stats.written },
+    { label: 'Poems read', value: stats.read },
+  ];
+  return (
+    <Card style={{ display: 'flex', marginTop: 20 }}>
+      {items.map((it, i) => (
+        <div key={it.label} style={{ flex: 1, textAlign: 'center', paddingLeft: i ? 12 : 0, borderLeft: i ? '1px solid var(--border-hairline)' : 'none' }}>
+          <div style={{ font: 'var(--text-headline)', color: 'var(--green-700)', marginBottom: 2 }}>{it.value}</div>
+          <div style={{ font: 'var(--text-caption)', color: 'var(--text-secondary)' }}>{it.label}</div>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+function CategoryCard({ category, onOpen }) {
+  return (
+    <div onClick={onOpen} style={{ flex: '1 1 28%', minWidth: 96, background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: '14px 10px', textAlign: 'center', cursor: 'pointer' }}>
+      <div style={{ font: 'var(--text-body-medium)', color: 'var(--text-primary)' }}>{category.label}</div>
+    </div>
+  );
+}
+
+function CompetitionCard({ competition, onOpen }) {
+  return (
+    <Card interactive onClick={() => onOpen(competition)} style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <div style={{ font: 'var(--text-title)', color: 'var(--text-primary)' }}>{competition.title}</div>
+        <Badge tone="neutral">{competition.deadline}</Badge>
+      </div>
+      <div style={{ font: 'var(--text-body)', color: 'var(--text-secondary)' }}>{competition.theme}</div>
+    </Card>
+  );
+}
+
+function HomeScreen({ onOpenPoem, onNewPoem, onOpenPoet, onOpenFeature, onExplorePrompts, onOpenCategory, onOpenCompetition }) {
+  return (
+    <div style={{ padding: '16px 16px 96px' }}>
+      <TopAppBar title="Poetry Prompt" style={{ padding: '0 0 14px', borderBottom: 'none' }} />
+      <PromptHero onNewPoem={onNewPoem} />
+      <WeeklyFeaturedCard feature={WEEKLY_FEATURE} onOpen={onOpenFeature} onOpenPoet={onOpenPoet} />
+      <DailyPoetCard poem={FEATURED_POEM} onOpen={onOpenPoem} />
+      <StatsCard stats={STATS} />
+      <div onClick={onExplorePrompts} style={{ textAlign: 'center', marginTop: 20, font: 'var(--text-caption-medium)', color: 'var(--green-700)', cursor: 'pointer' }}>Explore more prompts</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
+        {CATEGORIES.map((c) => <CategoryCard key={c.id} category={c} onOpen={() => onOpenCategory(c)} />)}
+      </div>
+      <div style={{ font: 'var(--text-label)', letterSpacing: 'var(--tracking-label)', color: 'var(--text-secondary)', margin: '32px 0 10px' }}>POETRY COMPETITIONS</div>
+      {COMPETITIONS.map((c) => <CompetitionCard key={c.id} competition={c} onOpen={onOpenCompetition} />)}
+    </div>
+  );
+}
+
+function FeedScreen({ onOpenPoem, onOpenPoet, onOpenNotifications, hasUnread }) {
+  return (
+    <div style={{ padding: '16px 16px 24px' }}>
+      <TopAppBar title="Feed" style={{ padding: '0 0 14px', borderBottom: 'none' }} right={
+        <div style={{ display: 'flex', gap: 2 }}>
+          <div style={{ position: 'relative' }}>
+            <IconButton aria-label="Notifications" onClick={onOpenNotifications}><Icon.bell /></IconButton>
+            {hasUnread && <span style={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', background: 'var(--heather-500)' }} />}
+          </div>
+        </div>
+      } />
+      <div style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)', marginBottom: 14 }}>Chronological — poets you follow, plus recent public poems.</div>
+      {FEED_POEMS.map(p => <FeedPoemCard key={p.id} poem={p} onOpen={onOpenPoem} onOpenPoet={onOpenPoet} />)}
+    </div>
+  );
+}
+
+function MyProfileScreen({ onOpenSettings, onOpenPoem }) {
+  const [tab, setTab] = useState('published');
+  const list = MY_POEMS.filter(p => p.status === tab);
+  return (
+    <div style={{ padding: '16px 16px 24px' }}>
+      <TopAppBar title="Profile" style={{ padding: '0 0 14px', borderBottom: 'none' }} right={<IconButton aria-label="Settings" onClick={onOpenSettings}><Icon.gear /></IconButton>} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+        <Avatar name={ME.name} size={56} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ font: 'var(--text-headline)', color: 'var(--text-primary)', marginBottom: 2 }}>{ME.name}</div>
+          <div style={{ font: 'var(--text-caption)', color: 'var(--text-secondary)' }}>{ME.bio}</div>
+        </div>
+      </div>
+      <Tabs style={{ marginBottom: 16 }} value={tab} onChange={setTab} tabs={[
+        { value: 'published', label: 'Published' }, { value: 'draft', label: 'Drafts' },
+      ]} />
+      {tab === 'draft' && <div style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)', marginBottom: 14 }}>Only you can see your drafts.</div>}
+      {list.length ? list.map(p => <LibraryPoemCard key={p.id} poem={p} onOpen={onOpenPoem} />) : (
+        <EmptyState title={tab === 'draft' ? 'No drafts' : 'Nothing published yet'} body={tab === 'draft' ? 'Poems you start will sit here privately.' : 'This is what other poets will see on your profile.'} />
+      )}
+    </div>
+  );
+}
+
+function PoetProfileScreen({ poet, onBack, onOpenPoem }) {
+  const [following, setFollowing] = useState(false);
+  const poems = FEED_POEMS.filter(p => p.author.name === poet.name);
+  return (
+    <div>
+      <TopAppBar title="" onBack={onBack} />
+      <div style={{ padding: '4px 16px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+          <Avatar name={poet.name} size={56} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ font: 'var(--text-headline)', color: 'var(--text-primary)', marginBottom: 2 }}>{poet.name}</div>
+            <div style={{ font: 'var(--text-caption)', color: 'var(--text-secondary)' }}>{poet.bio}</div>
+          </div>
+        </div>
+        <FollowButton following={following} onChange={setFollowing} size="md" style={{ width: '100%', marginBottom: 20 }} />
+        <div style={{ font: 'var(--text-label)', letterSpacing: 'var(--tracking-label)', color: 'var(--text-secondary)', marginBottom: 10 }}>POEMS</div>
+        {poems.length ? poems.map(p => <FeedPoemCard key={p.id} poem={p} onOpen={onOpenPoem} onOpenPoet={() => {}} />) : (
+          <EmptyState title="No poems yet" />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NotificationsScreen({ onBack, onOpenPoet }) {
+  return (
+    <div>
+      <TopAppBar title="Notifications" onBack={onBack} />
+      <div style={{ padding: '4px 8px 24px' }}>
+        {NOTIFICATIONS.length ? NOTIFICATIONS.map(n => n.type === 'streak' ? (
+          <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 8px' }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--state-warning-subtle)', color: 'oklch(40% 0.08 80)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2c1 4-3 5-3 9a3 3 0 006 0c0-1.5-1-2-1-3.5 2 1 3 3.5 3 5.5a5 5 0 01-10 0c0-4 3-6 5-11z" fill="currentColor"/></svg>
+            </div>
+            <div style={{ flex: 1, font: 'var(--text-body)', color: 'var(--text-primary)' }}>{n.text}</div>
+            <span style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)', flexShrink: 0 }}>{n.time}</span>
+          </div>
+        ) : (
+          <div key={n.id} onClick={() => onOpenPoet(n.author)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 8px', cursor: 'pointer' }}>
+            <Avatar name={n.author.name} size={36} />
+            <div style={{ flex: 1, font: 'var(--text-body)', color: 'var(--text-primary)' }}>
+              <strong style={{ fontWeight: 600 }}>{n.author.name}</strong> {n.text}
+            </div>
+            <span style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)', flexShrink: 0 }}>{n.time}</span>
+          </div>
+        )) : <EmptyState title="Nothing yet" body="Quiet acknowledgements and new followers will show up here." />}
+      </div>
+    </div>
+  );
+}
+
+function SettingsScreen({ onBack, onLogout }) {
+  const [remind, setRemind] = useState(true);
+  const [freq, setFreq] = useState('daily');
+  const [streakNudge, setStreakNudge] = useState(true);
+  return (
+    <div style={{ padding: '16px 16px 24px' }}>
+      <TopAppBar title="Settings" onBack={onBack} style={{ padding: '0 0 14px' }} />
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: remind ? 16 : 0 }}>
+          <div style={{ font: 'var(--text-body-medium)' }}>Daily prompt reminder</div>
+          <Switch checked={remind} onChange={setRemind} />
+        </div>
+        {remind && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 14, borderTop: '1px solid var(--border-hairline)' }}>
+            <Radio label="Every morning" checked={freq === 'daily'} onChange={() => setFreq('daily')} />
+            <Radio label="Once a week" checked={freq === 'weekly'} onChange={() => setFreq('weekly')} />
+          </div>
+        )}
+      </Card>
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ font: 'var(--text-body-medium)', marginBottom: 4 }}>Streak reminder</div>
+            <div style={{ font: 'var(--text-caption)', color: 'var(--text-secondary)' }}>One quiet nudge in the evening, only on days you haven't opened the app.</div>
+          </div>
+          <Switch checked={streakNudge} onChange={setStreakNudge} />
+        </div>
+      </Card>
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ font: 'var(--text-body-medium)', marginBottom: 4 }}>Connected accounts</div>
+        <div style={{ font: 'var(--text-caption)', color: 'var(--text-secondary)', marginBottom: 12 }}>Where your poems can be exported to.</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Badge tone="brand">Notion ✓</Badge>
+          <Badge tone="neutral">Google Docs</Badge>
+          <Badge tone="neutral">Email</Badge>
+        </div>
+      </Card>
+      <Button variant="ghost" onClick={onLogout} style={{ color: 'var(--state-error)', width: '100%' }}>Log out</Button>
+    </div>
+  );
+}
+
+function ExplorePromptsScreen({ onBack, onSelectPrompt }) {
+  return (
+    <div>
+      <TopAppBar title="Explore prompts" onBack={onBack} />
+      <div style={{ padding: '4px 16px 24px' }}>
+        <div style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)', marginBottom: 14 }}>Past daily prompts — pick one to write from.</div>
+        {PAST_PROMPTS.map((p) => (
+          <Card key={p.date} interactive onClick={() => onSelectPrompt(p.text)} style={{ marginBottom: 12 }}>
+            <div style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)', marginBottom: 8 }}>{p.date}</div>
+            <div style={{ font: 'var(--text-prompt)', fontStyle: 'italic', color: 'var(--green-700)' }}>{p.text}</div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CategoryPromptsScreen({ category, onBack, onSelectPrompt }) {
+  return (
+    <div>
+      <TopAppBar title={category.label + ' prompts'} onBack={onBack} />
+      <div style={{ padding: '4px 16px 24px' }}>
+        {category.prompts.map((text) => (
+          <Card key={text} interactive onClick={() => onSelectPrompt(text)} style={{ marginBottom: 12 }}>
+            <div style={{ font: 'var(--text-prompt)', fontStyle: 'italic', color: 'var(--green-700)' }}>{text}</div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CompetitionDetailScreen({ competition, onBack, onEnter }) {
+  return (
+    <div>
+      <TopAppBar title="" onBack={onBack} />
+      <div style={{ padding: '4px 24px 24px' }}>
+        <Badge tone="neutral" style={{ marginBottom: 14 }}>{competition.deadline}</Badge>
+        <div style={{ font: 'var(--text-headline)', marginBottom: 14 }}>{competition.title}</div>
+        <div style={{ font: 'var(--text-prompt)', fontStyle: 'italic', color: 'var(--green-700)', marginBottom: 20 }}>{competition.theme}</div>
+        <div style={{ font: 'var(--text-label)', letterSpacing: 'var(--tracking-label)', color: 'var(--text-secondary)', marginBottom: 6 }}>IF YOU'RE CHOSEN</div>
+        <div style={{ font: 'var(--text-body)', color: 'var(--text-secondary)', marginBottom: 28 }}>{competition.prize}</div>
+        <Button onClick={() => onEnter(competition)} style={{ width: '100%' }}>Write an entry</Button>
+      </div>
+    </div>
+  );
+}
+
+function WriteScreen({ onBack, onSaved, onPublish, prompt }) {
+  const [title, setTitle] = useState('');
+  const [draft, setDraft] = useState('');
+  const [status, setStatus] = useState('idle'); // idle | saving | saved
+  const timeoutRef = useRef(null);
+
+  const hasContent = draft.replace(/<[^>]*>/g, '').trim().length > 0;
+
+  const handleChange = (html) => {
+    setDraft(html);
+    const hasText = html.replace(/<[^>]*>/g, '').trim().length > 0;
+    setStatus(hasText ? 'saving' : 'idle');
+    clearTimeout(timeoutRef.current);
+    if (hasText) {
+      timeoutRef.current = setTimeout(() => setStatus('saved'), 700);
+    }
+  };
+
+  const handleBack = () => {
+    if (hasContent) onSaved(draft);
+    onBack();
+  };
+
+  const handlePublish = () => {
+    onPublish({
+      title: title.trim() || 'Untitled',
+      full: draft,
+      richHTML: true,
+      tags: [],
+      date: 'Just now',
+      status: 'draft',
+    });
+  };
+
+  return (
+    <div>
+      <TopAppBar title="New Poem" onBack={handleBack} right={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)' }}>
+            {status === 'saving' ? 'Saving\u2026' : status === 'saved' ? 'Saved' : ''}
+          </span>
+          <Button size="sm" onClick={handlePublish} disabled={!hasContent}>Publish</Button>
+        </div>
+      } />
+      <div style={{ padding: 16 }}>
+        <div style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)', marginBottom: 4 }}>PROMPT</div>
+        <div style={{ font: 'var(--text-prompt)', fontStyle: 'italic', color: 'var(--green-700)', marginBottom: 18 }}>{prompt || TODAYS_PROMPT}</div>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title your poem…"
+          style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', font: 'var(--text-headline)', color: 'var(--text-primary)', marginBottom: 6, padding: 0 }}
+        />
+        <div style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)', marginBottom: 18 }}>Saved privately as a draft, automatically. You choose when to publish.</div>
+        <PoemEditor value={draft} onChange={handleChange} placeholder="Begin here..." />
+      </div>
+    </div>
+  );
+}
+
+function PoemDetailScreen({ poem, onBack, onExport, onPublish, onOpenPoet }) {
+  const [fav, setFav] = useState(poem.favorite || false);
+  const own = poem.status !== undefined;
+  return (
+    <div>
+      <TopAppBar title="" onBack={onBack} right={
+        <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {(!own || poem.status === 'published') && <IconButton aria-label="Favorite" active={fav} onClick={() => setFav(!fav)} style={{ color: fav ? 'var(--heather-500)' : 'var(--ink-1)' }}><Icon.heart filled={fav} /></IconButton>}
+          {own && poem.status === 'published' && <IconButton aria-label="Export" onClick={onExport}><Icon.share /></IconButton>}
+          {own && poem.status === 'draft' && <Button size="sm" onClick={() => onPublish(poem)}>Publish</Button>}
+          {!own && !poem.featured && <ReportAction onReport={() => {}} />}
+        </div>
+      } />
+      <div style={{ padding: '4px 24px 24px' }}>
+        {!own && !poem.featured && (
+          <div onClick={() => onOpenPoet(poem.author)} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, cursor: 'pointer' }}>
+            <Avatar name={poem.author.name} size={32} />
+            <span style={{ font: 'var(--text-body-medium)', color: 'var(--text-primary)' }}>{poem.author.name}</span>
+          </div>
+        )}
+        {poem.featured && (
+          <div style={{ font: 'var(--text-caption-medium)', color: 'var(--text-secondary)', marginBottom: 16 }}>{poem.author.name}</div>
+        )}
+        <div style={{ font: 'var(--text-headline)', marginBottom: 6 }}>{poem.title}</div>
+        <div style={{ font: 'var(--text-caption)', color: 'var(--text-placeholder)', marginBottom: 20 }}>{poem.date}</div>
+        <div style={{ font: 'var(--text-poem)', color: 'var(--ink-1)', whiteSpace: 'pre-line', marginBottom: 20 }}>{poem.full}</div>
+        <div style={{ display: 'flex', gap: 6 }}>{poem.tags.map(t => <Tag key={t}>{t}</Tag>)}</div>
+      </div>
+    </div>
+  );
+}
+
+function FeaturedPoetScreen({ feature, onBack, onOpenPoet }) {
+  return (
+    <div>
+      <TopAppBar title="" onBack={onBack} />
+      <div style={{ padding: '4px 24px 24px' }}>
+        <div style={{ font: 'var(--text-caption-medium)', color: 'var(--green-700)', letterSpacing: 'var(--tracking-caption)', marginBottom: 14 }}>WEEKLY FEATURED POET</div>
+        <div onClick={() => onOpenPoet(feature.poet)} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer' }}>
+          <Avatar name={feature.poet.name} size={32} />
+          <span style={{ font: 'var(--text-body-medium)', color: 'var(--text-primary)' }}>{feature.poet.name}</span>
+        </div>
+        <div style={{ font: 'var(--text-headline)', marginBottom: 6 }}>{feature.poem.title}</div>
+        <div style={{ font: 'var(--text-poem)', color: 'var(--ink-1)', whiteSpace: 'pre-line', marginBottom: 28 }}>{feature.poem.full}</div>
+        <div style={{ font: 'var(--text-label)', letterSpacing: 'var(--tracking-label)', color: 'var(--text-secondary)', marginBottom: 14 }}>IN CONVERSATION</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {feature.conversation.map((qa, i) => (
+            <div key={i}>
+              <div style={{ font: 'var(--text-body-medium)', color: 'var(--text-primary)', marginBottom: 4 }}>{qa.q}</div>
+              <div style={{ font: 'var(--text-body)', color: 'var(--text-secondary)' }}>{qa.a}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublishScreen({ poem, onBack, onConfirm }) {
+  return (
+    <div>
+      <TopAppBar title="Publish poem" onBack={onBack} />
+      <div style={{ padding: '4px 24px 24px' }}>
+        <div style={{ font: 'var(--text-body)', color: 'var(--text-secondary)', marginBottom: 20 }}>This moves "{poem.title}" from your private drafts to your profile and the public feed. Anyone can read it, and you can't make it private again once others may have seen it.</div>
+        <Card style={{ marginBottom: 24 }}>
+          <div style={{ font: 'var(--text-headline)', marginBottom: 10 }}>{poem.title}</div>
+          {poem.richHTML
+            ? <div style={{ font: 'var(--text-poem)', color: 'var(--ink-1)', whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: poem.full }} />
+            : <div style={{ font: 'var(--text-poem)', color: 'var(--ink-1)', whiteSpace: 'pre-line' }}>{poem.full}</div>}
+        </Card>
+        <Button onClick={() => onConfirm(poem)} style={{ width: '100%' }}>Publish to feed</Button>
+      </div>
+    </div>
+  );
+}
+
+function AuthScreen({ mode, onSwitch, onContinue }) {
+  const isSignup = mode === 'signup';
+  return (
+    <div style={{ padding: '80px 28px 24px', display: 'flex', flexDirection: 'column', gap: 22, height: '100%', boxSizing: 'border-box' }}>
+      <div>
+        <div style={{ font: 'var(--text-display-2)', color: 'var(--green-700)', marginBottom: 8 }}>Poetry Prompt</div>
+        <div style={{ font: 'var(--text-body)', color: 'var(--text-secondary)' }}>{isSignup ? 'Create an account to publish and follow poets.' : 'Welcome back.'}</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {isSignup && <Input label="Name" placeholder="Your name" />}
+        <Input label="Email" placeholder="you@example.com" type="email" />
+        <Input label="Password" placeholder="••••••••" type="password" />
+      </div>
+      <Button onClick={onContinue}>{isSignup ? 'Create account' : 'Log in'}</Button>
+      <div style={{ textAlign: 'center', font: 'var(--text-caption)', color: 'var(--text-secondary)' }}>
+        {isSignup ? 'Already writing here? ' : 'New to Poetry Prompt? '}
+        <span onClick={() => onSwitch(isSignup ? 'login' : 'signup')} style={{ color: 'var(--green-700)', fontWeight: 600, cursor: 'pointer' }}>{isSignup ? 'Log in' : 'Sign up'}</span>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [authed, setAuthed] = useState(true);
+  const [authMode, setAuthMode] = useState('login');
+  const [tab, setTab] = useState('home');
+  const [stack, setStack] = useState([]); // e.g. [{type:'write'}, {type:'poemDetail', poem}]
+  const [exportOpen, setExportOpen] = useState(false);
+  const [toast, setToast] = useState('');
+  const [unread, setUnread] = useState(true);
+
+  const push = (screen) => setStack(s => [...s, screen]);
+  const pop = () => setStack(s => s.slice(0, -1));
+  const top = stack[stack.length - 1];
+
+  const notify = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2200); };
+
+  if (!authed) {
+    return (
+      <IOSDevice>
+        <AuthScreen mode={authMode} onSwitch={setAuthMode} onContinue={() => setAuthed(true)} />
+      </IOSDevice>
+    );
+  }
+
+  let body;
+  if (top && top.type === 'write') body = <WriteScreen prompt={top.prompt} onBack={pop} onSaved={() => {}} onPublish={(poem) => push({ type: 'publish', poem })} />;
+  else if (top && top.type === 'poemDetail') body = <PoemDetailScreen poem={top.poem} onBack={pop} onExport={() => setExportOpen(true)} onPublish={(poem) => push({ type: 'publish', poem })} onOpenPoet={(poet) => push({ type: 'poetProfile', poet })} />;
+  else if (top && top.type === 'publish') body = <PublishScreen poem={top.poem} onBack={pop} onConfirm={() => { notify('Published to your profile and the feed'); setStack([]); }} />;
+  else if (top && top.type === 'poetProfile') body = <PoetProfileScreen poet={top.poet} onBack={pop} onOpenPoem={(p) => push({ type: 'poemDetail', poem: p })} />;
+  else if (top && top.type === 'notifications') body = <NotificationsScreen onBack={pop} onOpenPoet={(poet) => push({ type: 'poetProfile', poet })} />;
+  else if (top && top.type === 'featuredPoet') body = <FeaturedPoetScreen feature={top.feature} onBack={pop} onOpenPoet={(poet) => push({ type: 'poetProfile', poet })} />;
+  else if (top && top.type === 'explorePrompts') body = <ExplorePromptsScreen onBack={pop} onSelectPrompt={(prompt) => push({ type: 'write', prompt })} />;
+  else if (top && top.type === 'category') body = <CategoryPromptsScreen category={top.category} onBack={pop} onSelectPrompt={(prompt) => push({ type: 'write', prompt })} />;
+  else if (top && top.type === 'competition') body = <CompetitionDetailScreen competition={top.competition} onBack={pop} onEnter={(competition) => push({ type: 'write', prompt: competition.theme })} />;
+  else if (top && top.type === 'settings') body = <SettingsScreen onBack={pop} onLogout={() => { setStack([]); setAuthed(false); setAuthMode('login'); }} />;
+  else if (tab === 'home') body = <HomeScreen onOpenPoem={(p) => push({ type: 'poemDetail', poem: p })} onNewPoem={() => push({ type: 'write' })} onOpenPoet={(poet) => push({ type: 'poetProfile', poet })} onOpenFeature={() => push({ type: 'featuredPoet', feature: WEEKLY_FEATURE })} onExplorePrompts={() => push({ type: 'explorePrompts' })} onOpenCategory={(category) => push({ type: 'category', category })} onOpenCompetition={(competition) => push({ type: 'competition', competition })} />;
+  else if (tab === 'feed') body = <FeedScreen
+      onOpenPoem={(p) => push({ type: 'poemDetail', poem: p })}
+      onOpenPoet={(poet) => push({ type: 'poetProfile', poet })}
+      onOpenNotifications={() => { setUnread(false); push({ type: 'notifications' }); }}
+      hasUnread={unread}
+    />;
+  else body = <MyProfileScreen onOpenSettings={() => push({ type: 'settings' })} onOpenPoem={(p) => push({ type: 'poemDetail', poem: p })} />;
+
+  const showChrome = stack.length === 0;
+
+  return (
+    <IOSDevice>
+      <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-app)', paddingTop: 47 }}>
+        <div style={{ flex: 1, overflow: 'auto' }}>{body}</div>
+        {showChrome && (
+          <React.Fragment>
+            <div style={{ position: 'absolute', right: 16, bottom: 82 }}><FAB onClick={() => push({ type: 'write' })} style={{ width: 48, height: 48 }}><Icon.plus /></FAB></div>
+            <BottomTabBar value={tab} onChange={setTab} items={[
+              { value: 'home', label: 'Home', icon: <Icon.home /> },
+              { value: 'feed', label: 'Feed', icon: <Icon.feed /> },
+              { value: 'profile', label: 'Profile', icon: <Icon.user /> },
+            ]} />
+          </React.Fragment>
+        )}
+        <Dialog open={exportOpen} title="Export poem" onClose={() => setExportOpen(false)}
+          actions={<Button variant="ghost" onClick={() => setExportOpen(false)}>Cancel</Button>}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {['Notion', 'Google Docs', 'Email', 'PDF'].map(d => (
+              <div key={d} onClick={() => { setExportOpen(false); notify('Exported to ' + d); }} style={{ padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'var(--paper-1)', cursor: 'pointer', font: 'var(--text-body-medium)' }}>{d}</div>
+            ))}
+          </div>
+        </Dialog>
+        <Toast message={toast} visible={!!toast} tone="success" />
+      </div>
+    </IOSDevice>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+<script>
+(function () {
+  var src = document.getElementById('app-jsx').textContent;
+  var out = Babel.transform(src, { presets: [['react', { runtime: 'classic' }]] }).code;
+  var s = document.createElement('script');
+  s.textContent = out;
+  document.body.appendChild(s);
+})();
+</script>
+</body>
+</html>

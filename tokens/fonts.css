@@ -1,0 +1,7 @@
+/* Poetry Prompt — webfonts
+   Newsreader: literary serif for headlines, poem text, and prompts.
+   Work Sans: humanist sans for UI chrome, labels, and body copy.
+   Google Fonts is used as the delivery CDN; the @import below resolves to
+   real @font-face declarations (with gstatic font-file URLs) at load time. */
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Work+Sans:wght@400;500;600;700&display=swap');
