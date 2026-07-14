@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Flame } from "lucide-react";
+import { Flame, ShieldAlert } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getNotifications } from "@/lib/queries/notifications";
 import { markAllNotificationsRead } from "@/lib/actions/notifications";
@@ -43,6 +43,33 @@ export default async function NotificationsPage() {
                 </div>
                 <div style={{ flex: 1, font: "var(--text-body)", color: "var(--text-primary)" }}>
                   Your streak ends tonight. Open the app again to keep it going.
+                </div>
+                <span style={{ font: "var(--text-caption)", color: "var(--text-placeholder)", flexShrink: 0 }}>
+                  {formatRelativeOrDate(n.createdAt)}
+                </span>
+              </div>
+            );
+          }
+          if (n.type === "moderation_warning") {
+            return (
+              <div key={n.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 8px" }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    background: "var(--state-error-subtle)",
+                    color: "var(--state-error)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <ShieldAlert size={16} strokeWidth={1.8} />
+                </div>
+                <div style={{ flex: 1, font: "var(--text-body)", color: "var(--text-primary)" }}>
+                  {n.message ?? "A moderator reviewed something on your account. Please review our community guidelines."}
                 </div>
                 <span style={{ font: "var(--text-caption)", color: "var(--text-placeholder)", flexShrink: 0 }}>
                   {formatRelativeOrDate(n.createdAt)}

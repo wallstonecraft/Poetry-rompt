@@ -9,6 +9,7 @@ export interface NotificationRecord {
   readAt: string | null;
   actor: { id: string; name: string; avatarUrl: string | null } | null;
   poemTitle: string | null;
+  message: string | null;
 }
 
 type NotificationRow = {
@@ -18,6 +19,7 @@ type NotificationRow = {
   read_at: string | null;
   actor: { id: string; name: string; avatar_url: string | null } | null;
   poem: { title: string } | null;
+  message: string | null;
 };
 
 export async function getNotifications(userId: string): Promise<NotificationRecord[]> {
@@ -25,7 +27,7 @@ export async function getNotifications(userId: string): Promise<NotificationReco
   const { data, error } = await supabase
     .from("notifications")
     .select(
-      "id, type, created_at, read_at, actor:profiles!notifications_actor_id_fkey(id, name, avatar_url), poem:poems(title)",
+      "id, type, created_at, read_at, message, actor:profiles!notifications_actor_id_fkey(id, name, avatar_url), poem:poems(title)",
     )
     .eq("recipient_id", userId)
     .order("created_at", { ascending: false });
@@ -37,6 +39,7 @@ export async function getNotifications(userId: string): Promise<NotificationReco
     readAt: row.read_at,
     actor: row.actor ? { id: row.actor.id, name: row.actor.name, avatarUrl: row.actor.avatar_url } : null,
     poemTitle: row.poem?.title ?? null,
+    message: row.message,
   }));
 }
 

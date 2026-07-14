@@ -5,8 +5,9 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type PoemStatus = "draft" | "published";
-export type NotificationType = "appreciation" | "follow" | "streak_risk";
+export type NotificationType = "appreciation" | "follow" | "streak_risk" | "moderation_warning";
 export type ReportReason = "spam" | "harassment" | "plagiarism" | "other";
+export type ReportStatus = "open" | "actioned" | "dismissed";
 export type ReminderFrequency = "daily" | "weekly";
 
 export interface Database {
@@ -19,6 +20,8 @@ export interface Database {
           bio: string | null;
           avatar_url: string | null;
           created_at: string;
+          is_admin: boolean;
+          suspended_at: string | null;
         };
         Insert: {
           id: string;
@@ -26,6 +29,8 @@ export interface Database {
           bio?: string | null;
           avatar_url?: string | null;
           created_at?: string;
+          is_admin?: boolean;
+          suspended_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
       Relationships: [];
@@ -178,6 +183,7 @@ export interface Database {
           poem_id: string | null;
           read_at: string | null;
           created_at: string;
+          message: string | null;
         };
         Insert: {
           id?: string;
@@ -187,6 +193,7 @@ export interface Database {
           poem_id?: string | null;
           read_at?: string | null;
           created_at?: string;
+          message?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["notifications"]["Insert"]>;
       Relationships: [];
@@ -217,6 +224,10 @@ export interface Database {
           reported_poet_id: string | null;
           reason: ReportReason;
           created_at: string;
+          status: ReportStatus;
+          outcome: string | null;
+          actioned_by: string | null;
+          actioned_at: string | null;
         };
         Insert: {
           id?: string;
@@ -225,6 +236,10 @@ export interface Database {
           reported_poet_id?: string | null;
           reason: ReportReason;
           created_at?: string;
+          status?: ReportStatus;
+          outcome?: string | null;
+          actioned_by?: string | null;
+          actioned_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["reports"]["Insert"]>;
       Relationships: [];
@@ -279,6 +294,26 @@ export interface Database {
       };
       set_my_poem_note: {
         Args: { p_poem_id: string; p_note: string };
+        Returns: undefined;
+      };
+      delete_my_account: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
+      admin_dismiss_report: {
+        Args: { p_report_id: string; p_outcome: string | null };
+        Returns: undefined;
+      };
+      admin_remove_reported_poem: {
+        Args: { p_report_id: string; p_outcome: string | null };
+        Returns: undefined;
+      };
+      admin_suspend_reported_account: {
+        Args: { p_report_id: string; p_outcome: string | null };
+        Returns: undefined;
+      };
+      admin_warn_reported_account: {
+        Args: { p_report_id: string; p_message: string | null };
         Returns: undefined;
       };
     };
