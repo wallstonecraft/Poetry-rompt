@@ -31,7 +31,7 @@ export default async function AboutYouPage() {
 
   return (
     <div style={{ padding: "16px 16px 24px" }}>
-      <BackTopAppBar title="About you" style={{ padding: "0 0 14px" }} />
+      <BackTopAppBar title="Your stats" style={{ padding: "0 0 14px" }} />
       <Card padding={0}>
         {rows.map((row, i) => (
           <div

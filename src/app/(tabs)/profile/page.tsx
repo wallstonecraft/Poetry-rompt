@@ -8,6 +8,7 @@ import { formatRelativeOrDate } from "@/lib/format";
 import { TopAppBar } from "@/components/ui/navigation/TopAppBar";
 import { Avatar } from "@/components/ui/data-display/Avatar";
 import { MyProfileTabs } from "@/components/screens/MyProfileTabs";
+import { BioEditor } from "@/components/screens/BioEditor";
 
 export default async function MyProfilePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
@@ -34,12 +35,12 @@ export default async function MyProfilePage({ searchParams }: { searchParams: Pr
         <Avatar name={profile?.name ?? ""} size={56} src={profile?.avatarUrl} />
         <div style={{ minWidth: 0 }}>
           <div style={{ font: "var(--text-headline)", color: "var(--text-primary)", marginBottom: 2 }}>{profile?.name}</div>
-          {profile?.bio && <div style={{ font: "var(--text-caption)", color: "var(--text-secondary)" }}>{profile.bio}</div>}
+          <BioEditor initialBio={profile?.bio ?? null} />
         </div>
       </div>
       <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
         <Link href="/about-you" style={{ font: "var(--text-caption-medium)", color: "var(--green-700)" }}>
-          About you
+          Your stats
         </Link>
         <Link href="/fragments" style={{ font: "var(--text-caption-medium)", color: "var(--green-700)" }}>
           Fragments ({fragmentsCount})
