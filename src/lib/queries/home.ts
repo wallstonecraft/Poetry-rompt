@@ -47,14 +47,14 @@ export async function getWeeklyFeature(): Promise<WeeklyFeatureRecord | null> {
     .limit(1)
     .maybeSingle();
   if (error) throw error;
-  return data ? mapFeature(data as FeatureRow) : null;
+  return data ? mapFeature(data as unknown as FeatureRow) : null;
 }
 
 export async function getFeaturedPoetById(id: string): Promise<WeeklyFeatureRecord | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("featured_poets").select(FEATURE_SELECT).eq("id", id).maybeSingle();
   if (error) throw error;
-  return data ? mapFeature(data as FeatureRow) : null;
+  return data ? mapFeature(data as unknown as FeatureRow) : null;
 }
 
 type DailyInspirationRow = {
@@ -85,12 +85,6 @@ export async function getDailyInspiration(): Promise<DailyInspirationRecord | nu
   };
 }
 
-export interface HomeStats {
-  streak: number;
-  written: number;
-  read: number;
-}
-
 function computeStreak(openedDates: string[]): number {
   const set = new Set(openedDates);
   let streak = 0;
@@ -104,20 +98,35 @@ function computeStreak(openedDates: string[]): number {
   return streak;
 }
 
-export async function getStats(userId: string): Promise<HomeStats> {
+export async function getStreak(userId: string): Promise<number> {
   const supabase = await createClient();
-  const [writtenRes, opensRes, readRes] = await Promise.all([
-    supabase.from("poems").select("id", { count: "exact", head: true }).eq("author_id", userId).eq("status", "published"),
-    supabase.from("app_opens").select("opened_on").eq("user_id", userId).order("opened_on", { ascending: false }).limit(400),
-    supabase.from("poem_reads").select("id", { count: "exact", head: true }).eq("user_id", userId),
-  ]);
-  if (writtenRes.error) throw writtenRes.error;
-  if (opensRes.error) throw opensRes.error;
-  if (readRes.error) throw readRes.error;
+  const { data, error } = await supabase
+    .from("app_opens")
+    .select("opened_on")
+    .eq("user_id", userId)
+    .order("opened_on", { ascending: false })
+    .limit(400);
+  if (error) throw error;
+  return computeStreak((data ?? []).map((o) => o.opened_on));
+}
 
-  return {
-    streak: computeStreak((opensRes.data ?? []).map((o) => o.opened_on)),
-    written: writtenRes.count ?? 0,
-    read: readRes.count ?? 0,
-  };
+export async function getPoemsWrittenCount(userId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("poems")
+    .select("id", { count: "exact", head: true })
+    .eq("author_id", userId)
+    .eq("status", "published");
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export async function getPoemsReadCount(userId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("poem_reads")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (error) throw error;
+  return count ?? 0;
 }

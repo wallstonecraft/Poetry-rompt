@@ -12,3 +12,15 @@ export function formatRelativeOrDate(iso: string | null): string {
 export function formatDeadline(iso: string): string {
   return `Closes ${new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
+
+/** Quiet, approximate — About You's "time spent writing" is a practice
+ * record, not a stopwatch, so this rounds to the nearest minute and drops
+ * to "Less than a minute" rather than showing 0m. */
+export function formatDuration(totalSeconds: number): string {
+  const minutes = Math.round(totalSeconds / 60);
+  if (minutes < 1) return "Less than a minute";
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours === 0) return `${remainingMinutes}m`;
+  return `${hours}h ${remainingMinutes}m`;
+}

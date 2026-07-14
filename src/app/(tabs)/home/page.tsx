@@ -1,39 +1,34 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getTodaysPrompt, getCategories } from "@/lib/queries/prompts";
-import { getWeeklyFeature, getDailyInspiration, getStats } from "@/lib/queries/home";
+import { getWeeklyFeature, getDailyInspiration } from "@/lib/queries/home";
+import { getRevisitItem } from "@/lib/queries/revisit";
 import { getCompetitions } from "@/lib/queries/competitions";
 import { logAppOpen } from "@/lib/actions/activity";
-import { formatDeadline } from "@/lib/format";
+import { formatDeadline, formatRelativeOrDate } from "@/lib/format";
 import { poemContentToPlainText } from "@/lib/richtext";
 import { TopAppBar } from "@/components/ui/navigation/TopAppBar";
 import { Card } from "@/components/ui/data-display/Card";
 import { Avatar } from "@/components/ui/data-display/Avatar";
 import { Badge } from "@/components/ui/feedback/Badge";
 import { StartWritingButton } from "@/components/screens/StartWritingButton";
+import { JustWriteLink } from "@/components/screens/JustWriteLink";
 
 export default async function HomePage() {
   const user = await requireUser();
   // The (tabs) layout also calls this, but Next.js renders a layout and its
-  // page concurrently rather than strictly sequentially — without an
-  // explicit await here, getStats() below can read app_opens before
-  // today's row has actually been written, undercounting the streak by one
-  // on the very visit that should extend it.
+  // page concurrently rather than strictly sequentially, so calling it again
+  // here guarantees today's app_opens row exists before anything on this
+  // page (or a page navigated to from here) reads it.
   await logAppOpen();
-  const [prompt, weeklyFeature, dailyInspiration, stats, categories, competitions] = await Promise.all([
+  const [prompt, weeklyFeature, dailyInspiration, revisitItem, categories, competitions] = await Promise.all([
     getTodaysPrompt(),
     getWeeklyFeature(),
     getDailyInspiration(),
-    getStats(user.id),
+    getRevisitItem(user.id),
     getCategories(),
     getCompetitions(),
   ]);
-
-  const statItems = [
-    { label: "Day streak", value: stats.streak },
-    { label: "Poems written", value: stats.written },
-    { label: "Poems read", value: stats.read },
-  ];
 
   return (
     <div style={{ padding: "16px 16px 24px" }}>
@@ -46,12 +41,34 @@ export default async function HomePage() {
         <div style={{ font: "var(--text-prompt)", fontStyle: "italic", color: "var(--paper-0)", marginBottom: 16 }}>
           {prompt?.text ?? "Describe a color you've never named."}
         </div>
-        <StartWritingButton
-          promptId={prompt?.id}
-          variant="secondary"
-          style={{ background: "var(--paper-0)", color: "var(--green-700)" }}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <StartWritingButton
+            promptId={prompt?.id}
+            variant="secondary"
+            style={{ background: "var(--paper-0)", color: "var(--green-700)" }}
+          />
+          <JustWriteLink />
+        </div>
       </Card>
+
+      {revisitItem && (
+        <Link
+          href={revisitItem.type === "draft" ? `/write/${revisitItem.id}` : "/fragments"}
+          style={{ display: "block", color: "inherit" }}
+        >
+          <Card interactive style={{ marginBottom: 20 }}>
+            <div style={{ font: "var(--text-caption-medium)", color: "var(--heather-600)", letterSpacing: "var(--tracking-caption)", marginBottom: 12 }}>
+              FROM YOUR NOTEBOOK
+            </div>
+            <div style={{ font: "var(--text-poem)", color: "var(--ink-1)", whiteSpace: "pre-line", marginBottom: 10 }}>
+              {revisitItem.text}
+            </div>
+            <div style={{ font: "var(--text-caption)", color: "var(--text-placeholder)" }}>
+              {revisitItem.type === "fragment" ? "A fragment from" : "A draft from"} {formatRelativeOrDate(revisitItem.date)}
+            </div>
+          </Card>
+        </Link>
+      )}
 
       {dailyInspiration && (
         <Link href={`/poem/${dailyInspiration.poem.id}`} style={{ display: "block", color: "inherit" }}>
@@ -66,18 +83,6 @@ export default async function HomePage() {
           </Card>
         </Link>
       )}
-
-      <Card style={{ display: "flex" }}>
-        {statItems.map((it, i) => (
-          <div
-            key={it.label}
-            style={{ flex: 1, textAlign: "center", paddingLeft: i ? 12 : 0, borderLeft: i ? "1px solid var(--border-hairline)" : "none" }}
-          >
-            <div style={{ font: "var(--text-headline)", color: "var(--green-700)", marginBottom: 2 }}>{it.value}</div>
-            <div style={{ font: "var(--text-caption)", color: "var(--text-secondary)" }}>{it.label}</div>
-          </div>
-        ))}
-      </Card>
 
       {weeklyFeature && (
         <Link href={`/featured/${weeklyFeature.id}`} style={{ display: "block", color: "inherit" }}>

@@ -93,6 +93,12 @@ export interface Database {
           published_at: string | null;
           created_at: string;
           updated_at: string;
+          // Present in the DB but never selectable via the normal client —
+          // column-level SELECT/UPDATE is revoked (see migration 0004).
+          // Read/write only through the get_my_poem_note / set_my_poem_note
+          // RPCs, which check ownership server-side.
+          author_note: string | null;
+          last_shown_at: string | null;
         };
         Insert: {
           id?: string;
@@ -108,6 +114,7 @@ export interface Database {
           published_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          last_shown_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["poems"]["Insert"]>;
       Relationships: [];
@@ -222,11 +229,58 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["reports"]["Insert"]>;
       Relationships: [];
       };
+      fragments: {
+        Row: {
+          id: string;
+          author_id: string;
+          text: string;
+          created_at: string;
+          last_shown_at: string | null;
+          promoted_to_poem_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          text: string;
+          created_at?: string;
+          last_shown_at?: string | null;
+          promoted_to_poem_id?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["fragments"]["Insert"]>;
+      Relationships: [];
+      };
+      writing_sessions: {
+        Row: {
+          id: string;
+          author_id: string;
+          poem_id: string | null;
+          started_at: string;
+          ended_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          poem_id?: string | null;
+          started_at?: string;
+          ended_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["writing_sessions"]["Insert"]>;
+      Relationships: [];
+      };
     };
-    // Required by @supabase/supabase-js's GenericSchema constraint even
-    // though this project has neither — an empty Tables-only schema
-    // otherwise silently resolves every row type to `never`.
+    // Required by @supabase/supabase-js's GenericSchema constraint — an
+    // empty Tables-only schema otherwise silently resolves every row type
+    // to `never`.
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_my_poem_note: {
+        Args: { p_poem_id: string };
+        Returns: string | null;
+      };
+      set_my_poem_note: {
+        Args: { p_poem_id: string; p_note: string };
+        Returns: undefined;
+      };
+    };
   };
 }

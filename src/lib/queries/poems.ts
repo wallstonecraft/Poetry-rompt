@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { PoemContent } from "@/lib/richtext";
+import { poemContentToPlainText, type PoemContent } from "@/lib/richtext";
 
 export interface PoemRecord {
   id: string;
@@ -156,7 +156,7 @@ export async function getPoemDetail(id: string): Promise<PoemRecord | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("poems").select(POEM_SELECT).eq("id", id).maybeSingle();
   if (error) throw error;
-  return data ? mapPoem(data as PoemRow) : null;
+  return data ? mapPoem(data as unknown as PoemRow) : null;
 }
 
 export interface DraftForEditing extends PoemRecord {
@@ -168,11 +168,25 @@ export interface DraftForEditing extends PoemRecord {
 const DRAFT_SELECT =
   "id, title, content, tags, status, published_at, created_at, updated_at, is_editorial, editorial_byline, author:profiles(id, name, avatar_url), competition:competitions(title, theme), prompt:prompts(text)";
 
+/** Words across everything you've ever written, drafts included — a
+ * practice record, not a measure of public output. Derived from content at
+ * read time rather than a maintained running counter, since this is a
+ * once-a-visit page, not a hot path. */
+export async function getWordsWritten(userId: string): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("poems").select("content").eq("author_id", userId);
+  if (error) throw error;
+  return (data ?? []).reduce((sum, row) => {
+    const text = poemContentToPlainText(row.content as unknown as PoemContent).trim();
+    return sum + (text ? text.split(/\s+/).length : 0);
+  }, 0);
+}
+
 export async function getDraftForEditing(id: string): Promise<DraftForEditing | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("poems").select(DRAFT_SELECT).eq("id", id).maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  const row = data as PoemRow & { prompt: { text: string } | null; competition: { title: string; theme: string } | null };
+  const row = data as unknown as PoemRow & { prompt: { text: string } | null; competition: { title: string; theme: string } | null };
   return { ...mapPoem(row), promptText: row.prompt?.text ?? row.competition?.theme ?? null };
 }

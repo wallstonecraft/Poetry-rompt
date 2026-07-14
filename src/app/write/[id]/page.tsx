@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getDraftForEditing } from "@/lib/queries/poems";
-import { getTodaysPrompt } from "@/lib/queries/prompts";
 import { WriteScreenClient } from "@/components/screens/WriteScreenClient";
 
 export default async function WritePage({ params }: { params: Promise<{ id: string }> }) {
@@ -14,14 +13,16 @@ export default async function WritePage({ params }: { params: Promise<{ id: stri
   // here rather than trusted from the SELECT succeeding.
   if (!poem || poem.author?.id !== user.id || poem.status !== "draft") notFound();
 
-  const promptText = poem.promptText ?? (await getTodaysPrompt())?.text ?? "";
-
+  // No fallback to today's prompt: a poem with no prompt_id/competition_id
+  // is freeform ("Just write") and the writing screen omits the PROMPT
+  // block entirely for it — it is not the same as "no prompt was passed in,
+  // so show today's as a default."
   return (
     <WriteScreenClient
       poemId={id}
       initialTitle={poem.title}
       initialContent={poem.content}
-      promptText={promptText}
+      promptText={poem.promptText}
       competitionTitle={poem.competitionTitle}
     />
   );

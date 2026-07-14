@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/forms/Button";
 import { Badge } from "@/components/ui/feedback/Badge";
 import { PoemEditor } from "@/components/richtext/PoemEditor";
 import { saveDraft, publishPoem } from "@/lib/actions/poems";
+import { startWritingSession, endWritingSession } from "@/lib/actions/writingSessions";
 import { hasVisibleText, type PoemContent } from "@/lib/richtext";
 
 /** A poem is always created as a private draft first (see createDraft) —
@@ -25,7 +26,7 @@ export function WriteScreenClient({
   poemId: string;
   initialTitle: string;
   initialContent: PoemContent;
-  promptText: string;
+  promptText: string | null;
   competitionTitle?: string | null;
 }) {
   const router = useRouter();
@@ -59,6 +60,21 @@ export function WriteScreenClient({
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
+
+  // Time-spent-writing instrumentation: start a session on mount, end it on
+  // unmount. A session left open by a hard refresh or tab close never gets
+  // an ended_at and is simply excluded from the About You total.
+  useEffect(() => {
+    let sessionId: string | null = null;
+    let cancelled = false;
+    void startWritingSession(poemId).then((id) => {
+      if (!cancelled) sessionId = id;
+    });
+    return () => {
+      cancelled = true;
+      if (sessionId) void endWritingSession(sessionId);
+    };
+  }, [poemId]);
 
   function flushSave(): Promise<void> {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -113,11 +129,15 @@ export function WriteScreenClient({
         }
       />
       <div style={{ padding: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <div style={{ font: "var(--text-caption)", color: "var(--text-placeholder)" }}>PROMPT</div>
-          {competitionTitle && <Badge tone="accent">{competitionTitle}</Badge>}
-        </div>
-        <div style={{ font: "var(--text-prompt)", fontStyle: "italic", color: "var(--green-700)", marginBottom: 18 }}>{promptText}</div>
+        {promptText && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <div style={{ font: "var(--text-caption)", color: "var(--text-placeholder)" }}>PROMPT</div>
+              {competitionTitle && <Badge tone="accent">{competitionTitle}</Badge>}
+            </div>
+            <div style={{ font: "var(--text-prompt)", fontStyle: "italic", color: "var(--green-700)", marginBottom: 18 }}>{promptText}</div>
+          </>
+        )}
         <input
           value={title}
           onChange={(e) => {

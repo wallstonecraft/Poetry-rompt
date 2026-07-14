@@ -61,3 +61,13 @@ export async function publishPoem(poemId: string) {
   revalidatePath("/feed");
   revalidatePath("/home");
 }
+
+/** The RPC itself silently no-ops if the poem isn't yours or isn't
+ * published (never allowed on drafts) — this action doesn't duplicate that
+ * check, it trusts the database. */
+export async function setPoemNote(poemId: string, note: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_my_poem_note", { p_poem_id: poemId, p_note: note });
+  if (error) throw error;
+  revalidatePath(`/poem/${poemId}`);
+}

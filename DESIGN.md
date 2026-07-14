@@ -208,7 +208,10 @@ All built in `ui_kits/mobile-app/index.html`, click-through in an iOS frame:
 
 1. **Sign up / Login** — email + password, toggle link between the two
    modes. No social auth designed; add if the stack decision calls for it.
-2. **Home** — today's prompt hero + your own recent published poems.
+2. **Home** — today's prompt hero (with a secondary "Just write, no
+   prompt" entry), an occasional Revisit card, the Weekly Featured Poet,
+   Daily Inspiration, your stats card, Explore-prompts link, category
+   cards, and poetry competitions.
 3. **Feed** — chronological list of `PoemCard` (feed variant) from followed
    poets + recent public poems; a notifications entry point in the top bar
    (plain dot indicator, not a count badge). No search in this build (see
@@ -220,14 +223,16 @@ All built in `ui_kits/mobile-app/index.html`, click-through in an iOS frame:
 5. **Poet profile** (someone else's) — avatar, name, one-line bio, follow
    button, their published poems as feed cards. No follower count.
 6. **My profile** — avatar, bio, a settings gear instead of a follow button,
-   and Published/Drafts tabs holding all of your own poems — so the
-   private/public boundary is always visible, never ambiguous. There is no
-   separate Library screen; this is the one home for your own work.
+   a Published/Drafts tab set holding all of your own poems, and two
+   quiet text entry points: **About you** and **Fragments** (with a live
+   count). No separate Library screen; this is the one home for your own
+   work and practice.
 7. **Writing view** — prompt shown above a title field and the rich-text
-   poem editor (bold/italic/underline toolbar); autosaves silently as a
-   private draft. Carries its own **Publish** action in the top bar, so a
-   poet can publish straight from here — not only from a saved draft in
-   Library/Profile.
+   poem editor (bold/italic toolbar); autosaves silently as a private
+   draft. Carries its own **Publish** action in the top bar, so a poet can
+   publish straight from here — not only from a saved draft in Profile.
+   Works in two modes, **prompt** and **freeform** ("Just write") — see
+   "Writing & practice layer" below for the object-model difference.
 8. **Publish flow** — confirmation screen shown before a draft goes public
    (see "Publish button" above).
 9. **Notifications** — flat list: who acknowledged a poem, who followed
@@ -239,11 +244,169 @@ All built in `ui_kits/mobile-app/index.html`, click-through in an iOS frame:
    UI-only feature to add later.
 10. **Settings** — reminder cadence, streak reminder toggle, connected
     export accounts (Notion/Docs/email — designed but **out of scope for
-    build one**, see below), log out.
+    build one**, see below), log out. The streak's on/off + cadence
+    *control* lives here; its *display* lives in About You (see "Writing &
+    practice layer" below) — not duplicated in both places.
+11. **Fragments** — reached from Profile. A quick-capture field (plain
+    text, no title) above a flat list of past fragments, each with a
+    "Turn into a poem" action.
+12. **About you** — reached from Profile. A private, read-only list of
+    practice stats: day streak, poems written, poems read, fragments
+    captured, words written, time spent writing. Nobody but the author
+    ever sees this screen.
 
 Desktop layouts were not designed in this pass — the mobile-first shell is
 the complete spec; widen the same single-column rhythm with more side margin
 rather than introducing new layout patterns for desktop.
+
+## Writing & practice layer (freeform writing, fragments, revisiting, personal record, private notes)
+
+Six connected additions beyond the prompt-only flow. Each entry below is a
+settled decision — object model, storage, and behaviour — not an open
+question. Complexity flags tell you what's UI-only on existing tables vs.
+what needs new backend work.
+
+### 1. Just write (freeform writing)
+**Object model:** identical to prompt-based writing. A poem/draft has a
+nullable `prompt_id` (or `prompt_text`, matching whatever prompts turn out
+to be modeled as) — "Just write" simply creates the row with that field
+null. There is no separate "freeform poem" type, no separate table, no
+separate draft list.
+**Reuses the exact same editor, autosave, title field, and Publish flow** as
+prompt-based writing — the only UI difference is the writing screen omits
+the "PROMPT" block when there's no prompt attached (see `WriteScreen`'s
+`freeform` mode in the UI kit).
+**Tagging to a prompt afterward:** no. `prompt_id` is set once, at creation,
+and stays that way permanently. Letting a poet retroactively attach a
+prompt is an editing feature nobody asked for and complicates "what prompt
+was this written from" as a stable fact about a poem — if it's ever wanted,
+design it as its own deliberate feature rather than defaulting to yes.
+**Home placement:** a plain text link — "Just write, no prompt" — sits
+inline with the "Start writing" button inside the prompt hero card itself,
+not a second card. It's a lower-emphasis alternative to the same action,
+not a competing feature.
+**Scope:** in for the next build stage. **Complexity: cheap, UI-level.**
+One nullable column on the existing poems table; no new table, no new
+Supabase logic beyond allowing null on that column.
+
+### 2. Notes / fragments
+**Object model:** a new, separate object type, `fragments` — deliberately
+not a poem with `status: 'fragment'`. A fragment is `{ id, author_id, text,
+created_at, last_shown_at }`. `text` is a **plain string, no marks, no
+title** — fragments never carry rich-text formatting or the spans/marks
+schema poems use; they're for capturing a thought, not composing.
+**Never directly publishable.** There is no path from a fragment straight
+to the public feed — it must go through promotion first.
+**Promotion path:** a fragment's "Turn into a poem" action opens the
+writing screen in **freeform** mode with the fragment's plain text seeded
+as the poem's initial content (converted into a single unformatted line in
+the poem's spans/marks structure). The fragment itself is **kept, not
+deleted**, and gets a `promoted_to_poem_id` reference set — so a poet's
+capture history stays intact and the fragments list can quietly exclude
+promoted entries without losing the record. Promotion is one-directional;
+there's no "unpromote."
+**Where it lives:** its own space, reached from a text entry point on
+Profile ("Fragments (n)") — not a tab alongside Poems/Drafts, and not in
+the bottom nav. Fragments are a different kind of object with a different
+level of ceremony; keeping them a deliberate tap away (rather than a
+default tab) keeps the poem library itself uncluttered by half-formed
+lines.
+**Scope:** in for the next build stage. **Complexity: bigger lift.** A new
+`fragments` table, its own CRUD, and the promotion write-path
+(`fragments.promoted_to_poem_id` + creating the seeded draft) are new
+backend surface, not an extension of existing poem logic.
+
+### 3. Revisit (resurfacing old fragments and drafts)
+**Where it appears:** a single card on Home, "From your notebook," between
+the prompt hero and the Weekly Featured Poet. Not its own screen or nav
+entry — it's a light touch, not a destination.
+**Frequency:** shown at most once per app session, and skipped on sessions
+where nothing qualifies (see selection logic) — never shown twice in a row
+for the same item. A poet who wants to browse everything old can already
+do that inside Fragments/Drafts; this card is a surprise, not a worklist.
+**Selection logic (plain terms):** eligible pool = fragments older than 14
+days OR drafts (unfinished poems) untouched for 14+ days. From that pool,
+prefer items with `last_shown_at` null (never revisited before); if
+several qualify, pick randomly among them. If none are eligible, show
+nothing that session — don't fall back to showing something too recent
+just to fill the slot. Whenever an item is shown, stamp its
+`last_shown_at` so the same thing doesn't resurface constantly.
+**Feel:** opening the card shows the fragment/draft as-is with no
+"finish this" framing, no due-date language, no counter of how many old
+drafts you have — a plain resurfaced excerpt with a quiet caption ("A
+fragment from Jun 22"), same visual register as Daily Inspiration.
+**Scope:** in for the next build stage, but **depends on #2 existing**
+(fragments) and benefits from drafts already existing (they do). **Complexity:
+moderate.** No new table, but needs the `last_shown_at` tracking column on
+fragments (and equivalent on poems/drafts) plus the selection query —
+lightweight but not purely a UI change on top of what #2 already adds.
+
+### 4. About you / personal writing record
+**Object model:** a read-only aggregate view, not a new entity. Rows shown:
+day streak, poems written, poems read, fragments captured, words written,
+time spent writing. All but the last two are simple counts/derivations
+from tables that already exist (poems by status, fragments count, streak
+counter). **"Words written" and "time spent writing" are the two metrics
+that need new instrumentation** — words written can be derived at
+publish/save time from poem content, but time spent requires tracking
+writing-session duration (start/stop timestamps around the editor being
+open), which does not exist anywhere else in this spec and has to be built
+for this feature specifically.
+**Consolidation with streak:** yes — **the streak's private display now
+lives here**, not as a standalone number anywhere else (it previously
+appeared on Home; that home-screen stat is superseded by this screen, see
+Stats card note below). The Settings toggle for the streak reminder is
+unaffected and stays in Settings (see #5).
+**Privacy:** never visible to anyone but the account owner — no public
+profile field, no share action, not even an aggregate on the public poet
+profile.
+**Scope:** in for the next build stage for everything except time-tracking;
+flag time-spent specifically as **its own small scope decision** to
+confirm before building, since it requires new instrumentation the rest of
+the app doesn't need. **Complexity: moderate-to-bigger** — mostly
+aggregation queries over existing tables (cheap), except time-tracking
+(new instrumentation, genuinely new capability).
+
+### 5. Streak — final placement
+Confirmed, not relitigated: the streak mechanic itself (private,
+opening-based, one quiet evening nudge, no public display, no shaming on a
+miss — see the Behaviour notes below) is unchanged. What changes is
+**where the number is shown**: it now lives in **About You** (see #4)
+instead of a standalone stats card on Home. The **on/off + cadence
+control** for the reminder notification stays in **Settings**, exactly as
+already specced — About You is display-only, Settings is where you change
+it. Home's stats card is removed in favour of the About You entry point on
+Profile, so the streak number isn't shown in two places.
+**Scope:** in for the next build stage (it's a relocation of an existing,
+already-scoped mechanic). **Complexity: cheap** — no schema change, just
+moving where the existing value is rendered.
+
+### 6. Private annotations on your own published poems
+**Object model:** a single nullable `author_note` text column on the poems
+table — **not** its own table, and **not** merged into the poem's
+spans/marks content. It is a separate field entirely: plain text, no rich
+formatting, author-only. Storing it separately (rather than as a hidden
+span in the poem body) keeps the poem's own content schema exactly what's
+rendered publicly, with no risk of a private note leaking through a
+rendering bug in the public view.
+**Where it's added/edited:** only on the poem detail screen, only when
+viewing **your own published poem** — never shown as an option on drafts
+(finish the poem first), never shown to anyone but the author, and **not
+indicated to other viewers in any way** — no icon, no "the poet left a
+note" hint, nothing observable on the public view that a note exists.
+**Scope:** in for the next build stage. **Complexity: cheap, UI-level.**
+One nullable column on the existing poems table; no new table, no new
+Supabase logic beyond a column-level access check (author-only read/write).
+
+### At-a-glance complexity summary
+- **Cheap / UI-level, extends existing tables:** #1 Just write, #5 Streak
+  relocation, #6 Private annotations.
+- **Bigger lift / new backend surface:** #2 Fragments (new table + CRUD +
+  promotion logic).
+- **Moderate, depends on #2 or needs new instrumentation:** #3 Revisit
+  (tracking column + selection query, depends on fragments existing), #4
+  About You (mostly cheap aggregation, except time-spent tracking which is
+  genuinely new).
 
 ## Out of scope for build one
 
@@ -283,10 +446,12 @@ any base lightness value in the palette changes.
 
 ## Behaviour notes for anything not obvious from the visuals
 
-- **Streaks**: private, opening-based (see readme "Streaks are private and
-  quiet"). One evening reminder notification, amber-toned, only on a day
-  you haven't opened the app — toggleable in Settings separately from the
-  daily-prompt reminder. No public display, no shaming on a missed day.
+- **Streaks**: private, opening-based. One evening reminder notification,
+  amber-toned, only on a day you haven't opened the app — toggleable in
+  Settings separately from the daily-prompt reminder. No public display, no
+  shaming on a missed day. Display now lives in **About You**, not Home —
+  see "Writing & practice layer" → #4/#5 above for the full, consolidated
+  spec; don't re-add a separate streak stat elsewhere.
 - A poem is **always** created as a private draft first, even when
   publishing directly from the writing screen — the Publish action there
   takes the same confirmation step as publishing an existing draft, it's

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getPoemDetail } from "@/lib/queries/poems";
 import { isLiked } from "@/lib/queries/social";
+import { getMyPoemNote } from "@/lib/queries/notes";
 import { logPoemRead } from "@/lib/actions/activity";
 import { formatRelativeOrDate } from "@/lib/format";
 import { BackTopAppBar } from "@/components/screens/BackTopAppBar";
@@ -11,6 +12,7 @@ import { Tag } from "@/components/ui/feedback/Tag";
 import { LinkButton } from "@/components/ui/forms/LinkButton";
 import { FavoriteToggle, ReportMenu } from "@/components/screens/PoemDetailActions";
 import { PublishNowButton } from "@/components/screens/PublishNowButton";
+import { PoemNote } from "@/components/screens/PoemNote";
 import Link from "next/link";
 
 export default async function PoemDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,6 +25,8 @@ export default async function PoemDetailPage({ params }: { params: Promise<{ id:
   // "Poems read" is meant to reflect reading others' work, not your own.
   if (!own) await logPoemRead(id);
   const liked = own && poem.status === "draft" ? false : await isLiked(user.id, id);
+  const ownPublished = own && poem.status === "published";
+  const note = ownPublished ? await getMyPoemNote(id) : null;
 
   const dateLine = poem.isEditorial
     ? poem.editorialByline
@@ -73,6 +77,7 @@ export default async function PoemDetailPage({ params }: { params: Promise<{ id:
             ))}
           </div>
         )}
+        {ownPublished && <PoemNote poemId={id} initialNote={note} />}
       </div>
     </div>
   );
